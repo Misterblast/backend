@@ -1,0 +1,30 @@
+name: Go Test
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Run formatting check
+        run: make fmt
+
+      - name: Run tests
+        run: |
+          make clean
+          make test-class
+          make test-lesson
+          make test-set

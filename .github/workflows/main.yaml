@@ -1,0 +1,17 @@
+name: Main CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yaml
+
+  build_push:
+    needs: test
+    uses: ./.github/workflows/build_push.yaml
