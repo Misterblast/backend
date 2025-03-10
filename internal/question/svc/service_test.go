@@ -74,7 +74,7 @@ func TestListAdminService(t *testing.T) {
 	service := svc.NewQuestionService(mockRepo)
 
 	mockData := []questionEntity.ListQuestionAdmin{
-		{ID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Question 1", IsQuiz: true, SetID: 1, SetName: "Set 1", LessonName: "Lesson 1", ClassName: "Class 1"},
+		{ID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Question 1", IsQuiz: true, SetID: 1, SetName: "Set 1", LessonName: "Lesson 1", ClassName: "Class 1", },
 	}
 
 	mockRepo.On("ListAdmin", mock.Anything, 1, 10).Return(mockData, nil)
@@ -90,7 +90,7 @@ func TestDetailQuestionService(t *testing.T) {
 	service := svc.NewQuestionService(mockRepo)
 
 	mockData := questionEntity.DetailQuestionExample{
-		ID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Question 1aaa", SetID: 9,
+		ID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Question 1aaa", SetID: 9, Explanation: "exp-1",
 	}
 
 	mockRepo.On("Detail", mock.Anything).Return(mockData, nil)
@@ -131,12 +131,13 @@ func TestEditQuestionService(t *testing.T) {
 	service := svc.NewQuestionService(mockRepo)
 
 	question := questionEntity.EditQuestion{
-		Number:  1,
-		Type:    "c4_faktual",
-		Format:  "mm",
-		Content: "Updated Question",
-		IsQuiz:  false,
-		SetID:   1,
+		Number:      1,
+		Type:        "c4_faktual",
+		Format:      "mm",
+		Content:     "Updated Question",
+		IsQuiz:      false,
+		SetID:       1,
+		Explanation: "exp-1",
 	}
 
 	mockRepo.On("Edit", int32(1), question).Return(nil)

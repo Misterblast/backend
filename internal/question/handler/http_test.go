@@ -77,7 +77,7 @@ func TestAddQuestionHandler(t *testing.T) {
 	handler := handler.NewQuestionHandler(mockService, validate)
 	app.Post("/question", handler.AddQuestionHandler)
 
-	question := questionEntity.SetQuestion{SetID: 9, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", IsQuiz: true}
+	question := questionEntity.SetQuestion{SetID: 9, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", Explanation: "exp-1", IsQuiz: true}
 	questionJSON, _ := json.Marshal(question)
 
 	mockService.On("AddQuestion", question).Return(nil)
@@ -97,7 +97,7 @@ func TestEditQuestionHandler(t *testing.T) {
 	handler := handler.NewQuestionHandler(mockService, validate)
 	app.Put("/question/:id", handler.EditQuestionHandler)
 
-	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c3_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false}
+	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c3_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false, Explanation: "exp-1"}
 	editJSON, _ := json.Marshal(editQuestion)
 
 	mockService.On("EditQuestion", int32(1), editQuestion).Return(nil)

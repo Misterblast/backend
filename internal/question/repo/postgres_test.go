@@ -17,10 +17,10 @@ func TestAddQuestion(t *testing.T) {
 	repository := repo.NewQuestionRepository(db)
 
 	mock.ExpectExec(`INSERT INTO questions`).
-		WithArgs(1, "c4_faktual", "mm", "Sample Question", true, 1).
+		WithArgs(1, "c4_faktual", "mm", "Sample Question", true, "exp-1", 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	question := questionEntity.SetQuestion{SetID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", IsQuiz: true}
+	question := questionEntity.SetQuestion{SetID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", IsQuiz: true, Explanation: "exp-1"}
 	err = repository.Add(question)
 
 	assert.NoError(t, err)
@@ -69,10 +69,10 @@ func TestListAdmin(t *testing.T) {
 
 	repository := repo.NewQuestionRepository(db)
 
-	mockRows := sqlmock.NewRows([]string{"id", "number", "type", "format", "content", "is_quiz", "set_id", "set_name", "lesson_name", "class_name"}).
-		AddRow(1, 1, "c4_faktual", "mm", "Question 1", true, 1, "Set 1", "Lesson 1", "Class 1")
+	mockRows := sqlmock.NewRows([]string{"id", "number", "type", "format", "content", "explanation", "is_quiz", "set_id", "set_name", "lesson_name", "class_name"}).
+		AddRow(1, 1, "c4_faktual", "mm", "Question 1", "exp-1", true, 1, "Set 1", "Lesson 1", "Class 1")
 
-	mock.ExpectQuery(`SELECT q.id, q.number, q.type, q.format, q.content, q.is_quiz, q.set_id`).
+	mock.ExpectQuery(`SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id`).
 		WillReturnRows(mockRows)
 
 	questions, err := repository.ListAdmin(map[string]string{}, 1, 10)
@@ -90,10 +90,10 @@ func TestEditQuestion(t *testing.T) {
 
 	repository := repo.NewQuestionRepository(db)
 
-	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c4_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false}
+	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c4_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false, Explanation: "exp-1"}
 
 	mock.ExpectExec(`UPDATE questions SET number =`).
-		WithArgs(editQuestion.Number, editQuestion.Type, editQuestion.Format, editQuestion.Content, editQuestion.IsQuiz, editQuestion.SetID, 1).
+		WithArgs(editQuestion.Number, editQuestion.Type, editQuestion.Format, editQuestion.Content, editQuestion.IsQuiz, editQuestion.SetID, editQuestion.Explanation, 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err = repository.Edit(1, editQuestion)

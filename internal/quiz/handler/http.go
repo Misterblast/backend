@@ -1,0 +1,126 @@
+package handler
+
+import (
+	"github.com/ghulammuzz/misterblast/internal/quiz/entity"
+	"github.com/ghulammuzz/misterblast/internal/quiz/svc"
+	"github.com/ghulammuzz/misterblast/pkg/app"
+	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/ghulammuzz/misterblast/pkg/middleware"
+	"github.com/ghulammuzz/misterblast/pkg/response"
+	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+type QuizHandler struct {
+	quizService svc.QuizService
+	val         *validator.Validate
+}
+
+func NewQuizHandler(quizService svc.QuizService, val *validator.Validate) *QuizHandler {
+	return &QuizHandler{quizService, val}
+}
+
+func (h *QuizHandler) Router(r fiber.Router) {
+	r.Post("/submit-quiz/:set_id", middleware.JWTProtected(), h.SubmitQuizHandler)
+
+	r.Get("/quiz-submission-admin", h.AdminQuizSubmissionHandler)
+	r.Get("/quiz-submission", middleware.JWTProtected(), h.QuizSubmissionHandler)
+
+}
+
+func (h *QuizHandler) SubmitQuizHandler(c *fiber.Ctx) error {
+	var req entity.QuizSubmit
+
+	setID, err := c.ParamsInt("set_id")
+	if err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid user ID", nil)
+	}
+
+	userToken := c.Locals("user").(*jwt.Token)
+
+	claims, ok := userToken.Claims.(jwt.MapClaims)
+	if !ok || !userToken.Valid {
+		log.Error("Invalid token")
+		return response.SendError(c, fiber.StatusUnauthorized, "Invalid token", nil)
+	}
+
+	userID := int(claims["user_id"].(float64))
+
+	if err := c.BodyParser(&req); err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+
+	if err := h.val.Struct(req); err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", err.Error())
+	}
+	if err := h.quizService.SubmitQuiz(req, setID, userID); err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "question added successfully", nil)
+}
+
+func (h *QuizHandler) AdminQuizSubmissionHandler(c *fiber.Ctx) error {
+	filter := map[string]string{}
+
+	if c.Query("class") != "" {
+		filter["class"] = c.Query("class")
+	}
+	if c.Query("lesson") != "" {
+		filter["lesson"] = c.Query("lesson")
+	}
+
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+
+	quiz, err := h.quizService.ListAdmin(filter, page, limit)
+	if err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "quiz admin retrieved successfully", quiz)
+}
+
+func (h *QuizHandler) QuizSubmissionHandler(c *fiber.Ctx) error {
+	userToken := c.Locals("user").(*jwt.Token)
+
+	claims, ok := userToken.Claims.(jwt.MapClaims)
+	if !ok || !userToken.Valid {
+		log.Error("Invalid token")
+		return response.SendError(c, fiber.StatusUnauthorized, "Invalid token", nil)
+	}
+
+	userID := int(claims["user_id"].(float64))
+
+	filter := map[string]string{}
+
+	if c.Query("class") != "" {
+		filter["class"] = c.Query("class")
+	}
+	if c.Query("lesson") != "" {
+		filter["lesson"] = c.Query("lesson")
+	}
+
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+
+	quiz, err := h.quizService.List(filter, page, limit, userID)
+	if err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "quiz admin retrieved successfully", quiz)
+}

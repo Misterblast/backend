@@ -37,8 +37,8 @@ func NewQuestionRepository(db *sql.DB) QuestionRepository {
 }
 
 func (r *questionRepository) Add(question questionEntity.SetQuestion) error {
-	query := `INSERT INTO questions (number, type, format, content, is_quiz, set_id) VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := r.db.Exec(query, question.Number, question.Type, question.Format, question.Content, question.IsQuiz, question.SetID)
+	query := `INSERT INTO questions (number, type, format, content, is_quiz, explanation, set_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := r.db.Exec(query, question.Number, question.Type, question.Format, question.Content, question.IsQuiz, question.Explanation, question.SetID)
 	if err != nil {
 		log.Error("[Repo][AddQuestion] Error inserting question:", err)
 		return app.NewAppError(500, err.Error())
@@ -47,9 +47,9 @@ func (r *questionRepository) Add(question questionEntity.SetQuestion) error {
 }
 
 func (r *questionRepository) Detail(id int32) (questionEntity.DetailQuestionExample, error) {
-	query := `SELECT id, number, type, format, content, set_id FROM questions WHERE id = $1`
+	query := `SELECT id, number, type, format, content, explanation, set_id FROM questions WHERE id = $1`
 	var question questionEntity.DetailQuestionExample
-	err := r.db.QueryRow(query, id).Scan(&question.ID, &question.Number, &question.Type, &question.Format, &question.Content, &question.SetID)
+	err := r.db.QueryRow(query, id).Scan(&question.ID, &question.Number, &question.Type, &question.Format, &question.Content, &question.Explanation, &question.SetID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return question, app.NewAppError(404, "question not found")
@@ -61,7 +61,7 @@ func (r *questionRepository) Detail(id int32) (questionEntity.DetailQuestionExam
 }
 
 func (r *questionRepository) List(filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
-	query := `SELECT id, number, type, format, content, set_id FROM questions WHERE 1=1`
+	query := `SELECT id, number, type, format, content, explanation, set_id FROM questions WHERE 1=1`
 	args := []interface{}{}
 	argCounter := 1
 
@@ -81,7 +81,7 @@ func (r *questionRepository) List(filter map[string]string) ([]questionEntity.Li
 	var questions []questionEntity.ListQuestionExample
 	for rows.Next() {
 		var question questionEntity.ListQuestionExample
-		if err := rows.Scan(&question.ID, &question.Number, &question.Type, &question.Format, &question.Content, &question.SetID); err != nil {
+		if err := rows.Scan(&question.ID, &question.Number, &question.Type, &question.Format, &question.Content, &question.Explanation, &question.SetID); err != nil {
 			log.Error("[Repo][ListQuestions] Error Scan: ", err)
 			return nil, app.NewAppError(500, "failed to scan question")
 		}
@@ -127,10 +127,10 @@ func (r *questionRepository) Exists(setID int32, number int) (bool, error) {
 func (r *questionRepository) Edit(id int32, question questionEntity.EditQuestion) error {
 	query := `
 		UPDATE questions 
-		SET number = $1, type = $2, content = $4, format = $3, is_quiz = $5, set_id = $6 
-		WHERE id = $7`
+		SET number = $1, type = $2, content = $4, format = $3, is_quiz = $5, set_id = $6, explanation = $7
+		WHERE id = $8`
 
-	_, err := r.db.Exec(query, question.Number, question.Type, question.Format, question.Content, question.IsQuiz, question.SetID, id)
+	_, err := r.db.Exec(query, question.Number, question.Type, question.Format, question.Content, question.IsQuiz, question.SetID, question.Explanation, id)
 	if err != nil {
 		log.Error("[Repo][EditQuestion] Error updating question:", err)
 		return app.NewAppError(500, err.Error())

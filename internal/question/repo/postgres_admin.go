@@ -10,7 +10,7 @@ import (
 
 func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int) ([]questionEntity.ListQuestionAdmin, error) {
 	query := `
-		SELECT q.id, q.number, q.type, q.format, q.content, q.is_quiz, q.set_id,
+		SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id,
 			   s.name AS set_name, l.name AS lesson_name, c.name AS class_name
 		FROM questions q
 		JOIN sets s ON q.set_id = s.id
@@ -67,7 +67,7 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 
 	for rows.Next() {
 		var q questionEntity.ListQuestionAdmin
-		err := rows.Scan(&q.ID, &q.Number, &q.Type, &q.Format, &q.Content, &q.IsQuiz, &q.SetID, &q.SetName, &q.LessonName, &q.ClassName)
+		err := rows.Scan(&q.ID, &q.Number, &q.Type, &q.Format, &q.Content, &q.Explanation, &q.IsQuiz, &q.SetID, &q.SetName, &q.LessonName, &q.ClassName)
 		if err != nil {
 			log.Error("[Repo][ListAdmin] Error Scan:", err)
 			return nil, app.NewAppError(500, "failed to scan admin questions")
