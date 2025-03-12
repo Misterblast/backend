@@ -5,6 +5,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/lesson/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -20,9 +21,9 @@ func NewLessonHandler(lessonService svc.LessonService, val *validator.Validate) 
 }
 
 func (h *LessonHandler) Router(r fiber.Router) {
-	r.Post("/lesson", h.AddLessonHandler)
-	r.Delete("/lesson/:id", h.DeleteLessonHandler)
-	r.Get("/lesson", h.ListLessonsHandler)
+	r.Post("/lesson", m.R100(), h.AddLessonHandler)
+	r.Delete("/lesson/:id", m.R100(), h.DeleteLessonHandler)
+	r.Get("/lesson", m.R100(), h.ListLessonsHandler)
 }
 
 func (h *LessonHandler) AddLessonHandler(c *fiber.Ctx) error {

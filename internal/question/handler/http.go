@@ -7,6 +7,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/internal/question/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
+	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
@@ -21,22 +22,22 @@ func NewQuestionHandler(questionService svc.QuestionService, val *validator.Vali
 
 func (h *QuestionHandler) Router(r fiber.Router) {
 	// question
-	r.Post("/question", h.AddQuestionHandler)
-	r.Put("/question/:id", h.EditQuestionHandler)
-	r.Get("/question/:id", h.DetailQuestionsHandler)
-	r.Get("/question", h.ListQuestionsHandler)
-	r.Delete("/question/:id", h.DeleteQuestionHandler)
+	r.Post("/question", m.R100(), h.AddQuestionHandler)
+	r.Put("/question/:id", m.R100(), h.EditQuestionHandler)
+	r.Get("/question/:id", m.R100(), h.DetailQuestionsHandler)
+	r.Get("/question", m.R100(), h.ListQuestionsHandler)
+	r.Delete("/question/:id", m.R100(), h.DeleteQuestionHandler)
 
 	// answer
-	r.Delete("/answer/:id", h.DeleteAnswerHandler)
-	r.Put("/answer/:id", h.EditAnswerHandler)
-	r.Post("/quiz-answer", h.AddQuizAnswerHandler)
+	r.Delete("/answer/:id", m.R100(), h.DeleteAnswerHandler)
+	r.Put("/answer/:id", m.R100(), h.EditAnswerHandler)
+	r.Post("/quiz-answer", m.R100(), h.AddQuizAnswerHandler)
 
 	// quiz
-	r.Get("/quiz", h.ListQuizHandler)
+	r.Get("/quiz", m.R100(), h.ListQuizHandler)
 
 	// admin
-	r.Get("/admin-question", h.ListQuestionAdminHandler)
+	r.Get("/admin-question", m.R100(), h.ListQuestionAdminHandler)
 }
 
 func (h *QuestionHandler) AddQuestionHandler(c *fiber.Ctx) error {

@@ -5,7 +5,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/quiz/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
-	"github.com/ghulammuzz/misterblast/pkg/middleware"
+	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -22,10 +22,10 @@ func NewQuizHandler(quizService svc.QuizService, val *validator.Validate) *QuizH
 }
 
 func (h *QuizHandler) Router(r fiber.Router) {
-	r.Post("/submit-quiz/:set_id", middleware.JWTProtected(), h.SubmitQuizHandler)
+	r.Post("/submit-quiz/:set_id", m.JWTProtected(), m.R100(), h.SubmitQuizHandler)
 
-	r.Get("/quiz-submission-admin", h.AdminQuizSubmissionHandler)
-	r.Get("/quiz-submission", middleware.JWTProtected(), h.QuizSubmissionHandler)
+	r.Get("/quiz-submission-admin", m.R100(), h.AdminQuizSubmissionHandler)
+	r.Get("/quiz-submission", m.JWTProtected(), m.R100(), h.QuizSubmissionHandler)
 
 }
 

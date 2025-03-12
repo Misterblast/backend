@@ -5,6 +5,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/email/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -20,8 +21,8 @@ func NewEmailHandler(emailService svc.EmailService, val *validator.Validate) *Em
 }
 
 func (h *EmailHandler) Router(r fiber.Router) {
-	r.Post("/activation/send-otp", h.SendOTPActivation)
-	r.Post("/activation/check-otp", h.CheckOTPHandler)
+	r.Post("/activation/send-otp", m.R1(), h.SendOTPActivation)
+	r.Post("/activation/check-otp", m.R100(), h.CheckOTPHandler)
 }
 
 func (h *EmailHandler) SendOTPActivation(c *fiber.Ctx) error {

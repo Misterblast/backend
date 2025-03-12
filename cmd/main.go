@@ -55,7 +55,6 @@ func main() {
 		DisableStartupMessage: true,
 	})
 	log.Info(os.Getenv("JWT_SECRET"))
-
 	app.Get("/hc", health.HealthCheck(db))
 	api := app.Group("/api")
 

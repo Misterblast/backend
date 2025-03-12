@@ -4,6 +4,7 @@ import (
 	classEntity "github.com/ghulammuzz/misterblast/internal/class/entity"
 	classSvc "github.com/ghulammuzz/misterblast/internal/class/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
+	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/gofiber/fiber/v2"
 )
@@ -17,9 +18,9 @@ func NewClassHandler(classService classSvc.ClassService) *ClassHandler {
 }
 
 func (h *ClassHandler) Router(r fiber.Router) {
-	r.Post("/class", h.AddClassHandler)
-	r.Delete("/class/:id", h.DeleteClassHandler)
-	r.Get("/class", h.ListClassesHandler)
+	r.Post("/class", m.R100(), h.AddClassHandler)
+	r.Delete("/class/:id", m.R100(), h.DeleteClassHandler)
+	r.Get("/class", m.R1(), h.ListClassesHandler)
 }
 
 func (h *ClassHandler) AddClassHandler(c *fiber.Ctx) error {

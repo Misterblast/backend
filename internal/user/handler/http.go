@@ -7,7 +7,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/user/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
-	"github.com/ghulammuzz/misterblast/pkg/middleware"
+	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -24,14 +24,14 @@ func NewUserHandler(userService svc.UserService, val *validator.Validate) *UserH
 }
 
 func (h *UserHandler) Router(r fiber.Router) {
-	r.Post("/register", h.RegisterHandler)
-	r.Post("/admin-check", h.RegisterAdminHandler)
-	r.Post("/login", h.LoginHandler)
-	r.Get("/users", h.ListUsersHandler)
-	r.Get("/users/:id", h.DetailUserHandler)
-	r.Delete("/users/:id", h.DeleteUserHandler)
-	r.Put("/users/:id", h.EditUserHandler)
-	r.Get("/me", middleware.JWTProtected(), h.MeUserHandler)
+	r.Post("/register", m.R100(), h.RegisterHandler)
+	r.Post("/admin-check", m.R100(), h.RegisterAdminHandler)
+	r.Post("/login", m.R100(), h.LoginHandler)
+	r.Get("/users", m.R100(), h.ListUsersHandler)
+	r.Get("/users/:id", m.R100(), h.DetailUserHandler)
+	r.Delete("/users/:id", m.R100(), h.DeleteUserHandler)
+	r.Put("/users/:id", m.R100(), h.EditUserHandler)
+	r.Get("/me", m.JWTProtected(), m.R100(), h.MeUserHandler)
 }
 
 func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {

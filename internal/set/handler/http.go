@@ -5,6 +5,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/set/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -20,9 +21,9 @@ func NewSetHandler(setService svc.SetService, val *validator.Validate) *SetHandl
 }
 
 func (h *SetHandler) Router(r fiber.Router) {
-	r.Post("/set", h.AddSetHandler)
-	r.Delete("/set/:id", h.DeleteSetHandler)
-	r.Get("/set", h.ListSetsHandler)
+	r.Post("/set", m.R100(), h.AddSetHandler)
+	r.Delete("/set/:id", m.R100(), h.DeleteSetHandler)
+	r.Get("/set", m.R100(), h.ListSetsHandler)
 }
 
 func (h *SetHandler) AddSetHandler(c *fiber.Ctx) error {
