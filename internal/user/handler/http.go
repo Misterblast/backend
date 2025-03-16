@@ -32,6 +32,7 @@ func (h *UserHandler) Router(r fiber.Router) {
 	r.Delete("/users/:id", m.R100(), h.DeleteUserHandler)
 	r.Put("/users/:id", m.R100(), h.EditUserHandler)
 	r.Get("/me", m.JWTProtected(), m.R100(), h.MeUserHandler)
+	r.Put("/reset-password", m.R100(), h.ChangePasswordHandler)
 }
 
 func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
@@ -223,4 +224,28 @@ func (h *UserHandler) DeleteUserHandler(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "user deleted successfully", nil)
+}
+
+func (h *UserHandler) ChangePasswordHandler(c *fiber.Ctx) error {
+	var changePassword entity.ChangePassword
+
+	if err := c.BodyParser(&changePassword); err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	if err := h.val.Struct(changePassword); err != nil {
+		validationErrors := app.ValidationErrorResponse(err)
+		log.Error("Validation failed: %v", validationErrors)
+		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
+	}
+
+	if err := h.userService.ChangePassword(changePassword.Token, changePassword.Password); err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "Change Password registered successfully", nil)
 }

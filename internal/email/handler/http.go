@@ -21,8 +21,9 @@ func NewEmailHandler(emailService svc.EmailService, val *validator.Validate) *Em
 }
 
 func (h *EmailHandler) Router(r fiber.Router) {
-	r.Post("/activation/send-otp", m.R1(), h.SendOTPActivation)
-	r.Post("/activation/check-otp", m.R100(), h.CheckOTPHandler)
+	// r.Post("/activation/send-otp", m.R1(), h.SendOTPActivation)
+	// r.Post("/activation/check-otp", m.R100(), h.CheckOTPHandler)
+	r.Post("/forgot-password", m.R100(), h.SendDeeplinkForgotPasswordHandler)
 }
 
 func (h *EmailHandler) SendOTPActivation(c *fiber.Ctx) error {
@@ -64,7 +65,7 @@ func (h *EmailHandler) CheckOTPHandler(c *fiber.Ctx) error {
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
 	}
 
-	if err := h.emailService.Validate(checkOTP.ID, checkOTP.OTP); err != nil {
+	if err := h.emailService.ValidateOTP(checkOTP.ID, checkOTP.OTP); err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
 			appErr = app.ErrInternal
@@ -73,4 +74,29 @@ func (h *EmailHandler) CheckOTPHandler(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "Valid", nil)
+}
+
+func (h *EmailHandler) SendDeeplinkForgotPasswordHandler(c *fiber.Ctx) error {
+
+	var SendDeeplink entity.SendDeeplink
+
+	if err := c.BodyParser(&SendDeeplink); err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	}
+
+	if err := h.val.Struct(SendDeeplink); err != nil {
+		validationErrors := app.ValidationErrorResponse(err)
+		log.Error("Validation failed: %v", validationErrors)
+		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
+	}
+
+	if err := h.emailService.SendDeeplink(SendDeeplink.Email); err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "Deeplink successfully sent to your email", nil)
 }

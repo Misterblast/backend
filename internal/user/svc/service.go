@@ -15,6 +15,7 @@ type UserService interface {
 	AuthUser(id int32) (userEntity.UserAuth, error)
 	EditUser(id int32, user userEntity.EditUser) error
 	DeleteUser(id int32) error
+	ChangePassword(token string, newPassword string) error
 }
 type userService struct {
 	userRepo userRepo.UserRepository
@@ -64,4 +65,14 @@ func (s *userService) AuthUser(id int32) (userEntity.UserAuth, error) {
 
 func (s *userService) DeleteUser(id int32) error {
 	return s.userRepo.Delete(id)
+}
+
+func (s *userService) ChangePassword(token string, newPassword string) error {
+
+	deeplink, err := s.userRepo.GetDeeplink(token)
+	if err != nil {
+		return err
+	}
+
+	return s.userRepo.EditPassword(deeplink.UserID, newPassword)
 }

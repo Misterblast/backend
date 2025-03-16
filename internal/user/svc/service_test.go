@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	emailEntity "github.com/ghulammuzz/misterblast/internal/email/entity"
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	userSvc "github.com/ghulammuzz/misterblast/internal/user/svc"
 )
@@ -60,6 +61,11 @@ func (m *MockUserRepository) Edit(id int32, user userEntity.EditUser) error {
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) EditPassword(id int32, newPassword string) error {
+	args := m.Called(id, newPassword)
+	return args.Error(0)
+}
+
 func (m *MockUserRepository) GetIDByEmail(email string) (int32, error) {
 	args := m.Called(email)
 	return args.Get(0).(int32), args.Error(1)
@@ -68,6 +74,21 @@ func (m *MockUserRepository) GetIDByEmail(email string) (int32, error) {
 func (m *MockUserRepository) List(filter map[string]string, page, limit int) ([]userEntity.ListUser, error) {
 	args := m.Called(filter, page, limit)
 	return args.Get(0).([]userEntity.ListUser), args.Error(1)
+}
+
+func (m *MockUserRepository) GetDeeplink(token string) (emailEntity.DeeplinkResponse, error) {
+	args := m.Called(token)
+	return args.Get(0).(emailEntity.DeeplinkResponse), args.Error(1)
+}
+
+func (m *MockUserRepository) SetDeeplink(userID int32, token string, expiresAt int64) error {
+	args := m.Called(userID, token, expiresAt)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) GenerateToken() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
 }
 
 func TestUserService_Register(t *testing.T) {

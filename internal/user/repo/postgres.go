@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
+	emailEntity "github.com/ghulammuzz/misterblast/internal/email/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
 	"golang.org/x/crypto/bcrypt"
@@ -21,6 +22,10 @@ type UserRepository interface {
 	Auth(id int32) (userEntity.UserAuth, error)
 	AdminActivation(adminID int32) error
 	GetIDByEmail(email string) (int32, error)
+	EditPassword(id int32, newPass string) error
+	SetDeeplink(userID int32, token string, expiresAt int64) error
+	GetDeeplink(token string) (emailEntity.DeeplinkResponse, error)
+	GenerateToken() (string, error)
 }
 
 type userRepository struct {
@@ -156,4 +161,17 @@ func (r *userRepository) GetIDByEmail(email string) (int32, error) {
 		return 0, app.NewAppError(500, "failed to get user ID")
 	}
 	return id, nil
+}
+
+func (r *userRepository) EditPassword(id int32, newPass string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPass), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	query := "UPDATE users SET password = $1, updated_at = EXTRACT(EPOCH from now()) WHERE id = $2"
+	_, err = r.DB.Exec(query, hashedPassword, id)
+	if err != nil {
+		return app.NewAppError(500, "failed to update password")
+	}
+	return nil
 }

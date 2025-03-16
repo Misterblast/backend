@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
+
 func R100() fiber.Handler {
 	return limiter.New(limiter.Config{
 		Max:        100,

@@ -11,7 +11,8 @@ import (
 
 type EmailService interface {
 	SendOTP(email string) error
-	Validate(adminID int32, otp string) error
+	SendDeeplink(email string) error
+	ValidateOTP(adminID int32, otp string) error
 }
 
 func NewEmailService(emailRepo emailRepo.EmailRepository, userRepo userRepo.UserRepository, otp emailRepo.OTP) EmailService {
@@ -52,7 +53,7 @@ func (s *emailService) SendOTP(email string) error {
 	return nil
 }
 
-func (s *emailService) Validate(adminID int32, otp string) error {
+func (s *emailService) ValidateOTP(adminID int32, otp string) error {
 
 	exists, err := s.userRepo.Exists(adminID)
 	if !exists {
@@ -82,6 +83,34 @@ func (s *emailService) Validate(adminID int32, otp string) error {
 	if err != nil {
 		log.Error("[Svc][s.userRepo.AdminActivation] Error Exec: ", err)
 		return app.NewAppError(500, err.Error())
+	}
+
+	return nil
+}
+
+func (s *emailService) SendDeeplink(email string) error {
+
+	userID, err := s.userRepo.GetIDByEmail(email)
+	if err != nil {
+		log.Error("[Svc][s.userRepo.GetIDByEmail] Error Exec: ", err)
+		return err
+	}
+	tokenString, err := s.userRepo.GenerateToken()
+	if err != nil {
+		log.Error("[Svc][s.userRepo.GenerateToken] Error Exec: ", err)
+		return err
+	}
+
+	expAt := time.Now().Add(120 * time.Second).Unix()
+
+	if err := s.userRepo.SetDeeplink(userID, tokenString, expAt); err != nil {
+		log.Error("[Svc][s.userRepo.SetDeeplink] Error Exec: ", err)
+		return err
+	}
+
+	if err := s.otp.SendDeeplinkEmailSMTP(email, tokenString); err != nil {
+		log.Error("[Svc][s.otp.SendDeeplinkEmailSMTP] Error Exec: ", err)
+		return err
 	}
 
 	return nil
