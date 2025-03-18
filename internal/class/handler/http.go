@@ -20,7 +20,7 @@ func NewClassHandler(classService classSvc.ClassService) *ClassHandler {
 func (h *ClassHandler) Router(r fiber.Router) {
 	r.Post("/class", m.R100(), h.AddClassHandler)
 	r.Delete("/class/:id", m.R100(), h.DeleteClassHandler)
-	r.Get("/class", m.R1(), h.ListClassesHandler)
+	r.Get("/class", m.R100(), h.ListClassesHandler)
 }
 
 func (h *ClassHandler) AddClassHandler(c *fiber.Ctx) error {
