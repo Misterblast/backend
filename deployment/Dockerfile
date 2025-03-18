@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23.7-alpine3.21 AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY . .
 
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o main cmd/main.go
 
-FROM alpine:3.17
+FROM alpine:3.21
 
 WORKDIR /root/
 
