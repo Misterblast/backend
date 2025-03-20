@@ -30,10 +30,10 @@ type TaskResponseDto struct {
 	Title         string            `json:"title"`
 	Description   string            `json:"description"`
 	Content       string            `json:"content"`
-	Author        entity.DetailUser `json:"author"`
-	Statistic     TaskStatisticDto  `json:"statistic"`
 	LastUpdatedBy entity.DetailUser `json:"last_updated_by"`
 	LastUpdatedAt string            `json:"last_updated_at"`
+	Author        entity.DetailUser `json:"author"`
+	Statistic     TaskStatisticDto  `json:"statistic"`
 }
 
 type TaskDetailResponseDto struct {
@@ -50,8 +50,4 @@ type TaskDetailResponseDto struct {
 type TaskStatisticDto struct {
 	TotalAssignment        int32   `json:"total_assignment"`
 	AverageAssignmentScore float32 `json:"average_assignment_score"`
-}
-
-type ListTaskResponseDto struct {
-	Tasks []TaskResponseDto `json:"tasks"`
 }
