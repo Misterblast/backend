@@ -3,6 +3,7 @@ package helper
 import (
 	"fmt"
 	"mime/multipart"
+	"net/url"
 	"strings"
 )
 
@@ -24,4 +25,13 @@ func GetFileType(file *multipart.FileHeader) (string, error) {
 
 func ValidateFileSize(file *multipart.FileHeader, maxSize int64) bool {
 	return file.Size <= maxSize
+}
+
+func GetFileKey(urlString string) string {
+	parsedURL, err := url.Parse(urlString)
+	if err != nil {
+		fmt.Println("Error parsing URL:", err)
+		return ""
+	}
+	return strings.ReplaceAll(parsedURL.Path, "/img/", "")
 }

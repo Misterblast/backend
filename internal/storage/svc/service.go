@@ -75,8 +75,26 @@ func (s StorageServiceImpl) UploadFile(request entity.UploadFileRequestDto) (mod
 }
 
 func (s StorageServiceImpl) DeleteFile(key string) error {
-	//TODO implement me
-	panic("implement me")
+	log.Info("[Svc][Storage]Deleting file with key: ", key)
+	req, err := s.prepareRequest(s.client.Delete(s.baseUrl + "/img?key=" + key))
+	if err != nil {
+		var appErr *app.AppError
+		if !errors.As(err, &appErr) {
+			log.Errorf("[Svc][Storage]prepare request failed: %v", err)
+			return app.NewAppError(fiber.StatusInternalServerError, "failed to prepare storage connection")
+		}
+		return appErr
+	}
+	code, data, errs := req.String()
+	if len(errs) > 0 {
+		log.Errorf("[Svc][Storage]Http request failed: %v", errs)
+		return app.NewAppError(fiber.StatusInternalServerError, "Failed to delete file")
+	}
+	if code != fiber.StatusOK {
+		log.Errorf("[Svc][Storage]Http request not ok: %s", data)
+		return app.NewAppError(fiber.StatusInternalServerError, "Failed to delete file")
+	}
+	return nil
 }
 
 func (s StorageServiceImpl) prepareRequest(requestAgent *fiber.Agent) (*fiber.Agent, error) {

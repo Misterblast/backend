@@ -14,6 +14,7 @@ import (
 
 type TaskRepository interface {
 	List(request entity.ListTaskRequestDto) (models.PaginationResponse[entity.TaskResponseDto], error)
+	ListAttachments(taskId int32) ([]entity.TaskAttachment, error)
 	Create(task entity.Task) error
 	Index(taskId int32) (entity.TaskDetailResponseDto, error)
 	Update(task entity.Task) error
@@ -96,7 +97,7 @@ func (r *TaskRepositoryImpl) Index(taskId int32) (entity.TaskDetailResponseDto, 
 	FROM tasks t 
 	    LEFT JOIN users u ON t.author = u.id 
 	    LEFT JOIN users u2 ON t.updated_by = u2.id 
-	WHERE t.id = $1`
+	WHERE t.id = $1 AND t.deleted_at IS NULL`
 
 	row := r.db.QueryRow(tasksQuery, taskId)
 	if err := row.Scan(
@@ -111,22 +112,9 @@ func (r *TaskRepositoryImpl) Index(taskId int32) (entity.TaskDetailResponseDto, 
 		return task, app.NewAppError(http.StatusInternalServerError, "failed to scan task")
 	}
 
-	attachmentsQuery := `SELECT type, url FROM task_attachments WHERE task_id = $1`
-	rows, err := r.db.Query(attachmentsQuery, taskId)
+	attachments, err := r.ListAttachments(taskId)
 	if err != nil {
-		log.Error("[Repo][Tasks] failed to query attachments, cause : %s", err.Error())
-		return task, app.NewAppError(http.StatusInternalServerError, "failed to get attachments")
-	}
-
-	defer rows.Close()
-	attachments := make([]entity.TaskAttachment, 0)
-	for rows.Next() {
-		var attachment entity.TaskAttachment
-		if err := rows.Scan(&attachment.Type, &attachment.Url); err != nil {
-			log.Error("[Repo][Tasks] failed to scan attachments, cause : %s", err.Error())
-			return task, app.NewAppError(http.StatusInternalServerError, "failed to scan attachment")
-		}
-		attachments = append(attachments, attachment)
+		return task, err
 	}
 	task.Attachments = attachments
 
@@ -180,5 +168,32 @@ func (r *TaskRepositoryImpl) Update(task entity.Task) error {
 }
 
 func (r *TaskRepositoryImpl) Delete(taskId int32) error {
-	panic("unimplemented")
+	query := `UPDATE tasks SET deleted_at = EXTRACT(EPOCH FROM NOW()) WHERE id = $1;`
+	_, err := r.db.Exec(query, taskId)
+	if err != nil {
+		log.Error("[Repo][Tasks] failed to delete task, cause : %s", err.Error())
+		return app.NewAppError(http.StatusInternalServerError, "failed to delete task")
+	}
+	return nil
+}
+
+func (r *TaskRepositoryImpl) ListAttachments(taskId int32) ([]entity.TaskAttachment, error) {
+	attachments := make([]entity.TaskAttachment, 0)
+	attachmentsQuery := `SELECT type, url FROM task_attachments WHERE task_id = $1`
+	rows, err := r.db.Query(attachmentsQuery, taskId)
+	if err != nil {
+		log.Error("[Repo][Tasks] failed to query attachments, cause : %s", err.Error())
+		return attachments, app.NewAppError(http.StatusInternalServerError, "failed to get attachments")
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var attachment entity.TaskAttachment
+		if err := rows.Scan(&attachment.Type, &attachment.Url); err != nil {
+			log.Error("[Repo][Tasks] failed to scan attachments, cause : %s", err.Error())
+			return attachments, app.NewAppError(http.StatusInternalServerError, "failed to scan attachment")
+		}
+		attachments = append(attachments, attachment)
+	}
+	return attachments, nil
 }

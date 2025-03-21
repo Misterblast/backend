@@ -23,6 +23,7 @@ type TaskService interface {
 	Create(userId int32, task entity.CreateTaskRequestDto) error
 	List(request entity.ListTaskRequestDto) (models.PaginationResponse[entity.TaskResponseDto], error)
 	Index(taskId int32) (entity.TaskDetailResponseDto, error)
+	Delete(taskId int32) error
 }
 
 type TaskServiceImpl struct {
@@ -113,7 +114,7 @@ func (t *TaskServiceImpl) uploadFilesToStorageService(files []*multipart.FileHea
 
 	for _, attachment := range files {
 		response, err := t.storageService.UploadFile(storageEntity.UploadFileRequestDto{
-			Key:  fmt.Sprintf("task-attachments/%s-%s", strconv.Itoa(int(time.Now().Unix())), strings.ReplaceAll("_", " ", attachment.Filename)),
+			Key:  fmt.Sprintf("task-attachments/%s-%s", strconv.Itoa(int(time.Now().Unix())), strings.ReplaceAll(attachment.Filename, " ", "_")),
 			File: attachment,
 		})
 
@@ -132,4 +133,19 @@ func (t *TaskServiceImpl) uploadFilesToStorageService(files []*multipart.FileHea
 		})
 	}
 	return attachments, nil
+}
+
+func (t *TaskServiceImpl) Delete(taskId int32) error {
+	err := t.repo.Delete(taskId)
+	if err != nil {
+		return app.NewAppError(fiber.StatusInternalServerError, "failed to delete task")
+	}
+	attachments, _ := t.repo.ListAttachments(taskId)
+	for _, attachment := range attachments {
+		err := t.storageService.DeleteFile(helper.GetFileKey(attachment.Url))
+		if err != nil {
+			log2.Errorf("[Svc.Task.Delete] failed to delete file, cause: %v", err)
+		}
+	}
+	return nil
 }

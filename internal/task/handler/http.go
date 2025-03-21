@@ -27,6 +27,7 @@ func (h *TaskHandler) Router(r fiber.Router) {
 	r.Get("/tasks", m.R100(), m.JWTProtected(), h.List)
 	r.Get("/tasks/:id", m.R100(), m.JWTProtected(), h.Index)
 	r.Post("/tasks", m.R100(), m.JWTProtected(), h.CreateTask)
+	r.Delete("/tasks/:id", m.R100(), m.JWTProtected(), h.Delete)
 }
 
 func (h *TaskHandler) List(c *fiber.Ctx) error {
@@ -62,6 +63,22 @@ func (h *TaskHandler) Index(c *fiber.Ctx) error {
 		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
 	return response.SendResponse(c, fiber.StatusOK, "Task retrieved", task)
+}
+func (h *TaskHandler) Delete(c *fiber.Ctx) error {
+	taskId, err := c.ParamsInt("id")
+	if err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid Params", nil)
+	}
+	err = h.s.Delete(int32(taskId))
+	if err != nil {
+		var appErr *app.AppError
+		ok := errors.As(err, &appErr)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+	return response.SendResponse(c, fiber.StatusOK, "Task Deleted", nil)
 }
 
 func (h *TaskHandler) CreateTask(c *fiber.Ctx) error {
