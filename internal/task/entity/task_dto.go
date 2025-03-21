@@ -41,8 +41,9 @@ type TaskDetailResponseDto struct {
 	Title         string            `json:"title"`
 	Description   string            `json:"description"`
 	Content       string            `json:"content"`
-	Author        entity.DetailUser `json:"author"`
+	Attachments   []TaskAttachment  `form:"attachments"`
 	Statistic     TaskStatisticDto  `json:"statistic"`
+	Author        entity.DetailUser `json:"author"`
 	LastUpdatedBy entity.DetailUser `json:"last_updated_by"`
 	LastUpdatedAt string            `json:"last_updated_at"`
 }

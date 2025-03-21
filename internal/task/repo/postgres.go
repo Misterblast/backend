@@ -15,6 +15,7 @@ import (
 type TaskRepository interface {
 	List(request entity.ListTaskRequestDto) (models.PaginationResponse[entity.TaskResponseDto], error)
 	Create(task entity.Task) error
+	Index(taskId int32) (entity.TaskDetailResponseDto, error)
 	Update(task entity.Task) error
 	Delete(taskId int32) error
 }
@@ -39,7 +40,7 @@ func (r *TaskRepositoryImpl) List(request entity.ListTaskRequestDto) (models.Pag
 
 	err := r.db.QueryRow(queryCount, args...).Scan(&response.Total)
 	if err != nil {
-		log.Error("[Repo][Tasks] failed to query count, cause: %v", err) // Corrected log.Error -> log.Errorf
+		log.Error("[Repo][Tasks] failed to query count, cause : %s", err.Error())
 		return response, app.NewAppError(http.StatusInternalServerError, "failed to get count")
 	}
 	query := `SELECT 
@@ -76,7 +77,7 @@ func (r *TaskRepositoryImpl) List(request entity.ListTaskRequestDto) (models.Pag
 			&task.Author.ID, &task.Author.Name, &task.Author.Email, &task.Author.ImgUrl,
 			&task.LastUpdatedBy.ID, &task.LastUpdatedBy.Name, &task.LastUpdatedBy.Email, &task.LastUpdatedBy.ImgUrl,
 		); err != nil {
-			log.Error("[Repo][Tasks] failed to scan tasks, cause : %v", err)
+			log.Error("[Repo][Tasks] failed to scan tasks, cause : %s", err.Error())
 			return response, app.NewAppError(http.StatusInternalServerError, "failed to scan task")
 		}
 		tasks = append(tasks, task)
@@ -86,9 +87,56 @@ func (r *TaskRepositoryImpl) List(request entity.ListTaskRequestDto) (models.Pag
 	return response, nil
 }
 
+func (r *TaskRepositoryImpl) Index(taskId int32) (entity.TaskDetailResponseDto, error) {
+	var task entity.TaskDetailResponseDto
+	tasksQuery := `SELECT 
+    t.id, t.title, t.description, t.content, t.updated_at, 
+    u.id, u.name, u.email, COALESCE(u.img_url, ''), 
+    u2.id, u2.name, u2.email, COALESCE(u2.img_url, '')  
+	FROM tasks t 
+	    LEFT JOIN users u ON t.author = u.id 
+	    LEFT JOIN users u2 ON t.updated_by = u2.id 
+	WHERE t.id = $1`
+
+	row := r.db.QueryRow(tasksQuery, taskId)
+	if err := row.Scan(
+		&task.ID, &task.Title, &task.Description, &task.Content, &task.LastUpdatedAt,
+		&task.Author.ID, &task.Author.Name, &task.Author.Email, &task.Author.ImgUrl,
+		&task.LastUpdatedBy.ID, &task.LastUpdatedBy.Name, &task.LastUpdatedBy.Email, &task.LastUpdatedBy.ImgUrl,
+	); err != nil {
+		log.Error("[Repo][Tasks] failed to scan tasks, cause : %s", err.Error())
+		if err.Error() == "sql: no rows in result set" {
+			return task, app.NewAppError(http.StatusNotFound, "task not found")
+		}
+		return task, app.NewAppError(http.StatusInternalServerError, "failed to scan task")
+	}
+
+	attachmentsQuery := `SELECT type, url FROM task_attachments WHERE task_id = $1`
+	rows, err := r.db.Query(attachmentsQuery, taskId)
+	if err != nil {
+		log.Error("[Repo][Tasks] failed to query attachments, cause : %s", err.Error())
+		return task, app.NewAppError(http.StatusInternalServerError, "failed to get attachments")
+	}
+
+	defer rows.Close()
+	attachments := make([]entity.TaskAttachment, 0)
+	for rows.Next() {
+		var attachment entity.TaskAttachment
+		if err := rows.Scan(&attachment.Type, &attachment.Url); err != nil {
+			log.Error("[Repo][Tasks] failed to scan attachments, cause : %s", err.Error())
+			return task, app.NewAppError(http.StatusInternalServerError, "failed to scan attachment")
+		}
+		attachments = append(attachments, attachment)
+	}
+	task.Attachments = attachments
+
+	return task, nil
+}
+
 func (r *TaskRepositoryImpl) Create(task entity.Task) error {
 	tx, err := r.db.Begin()
 	if err != nil {
+		log.Error("[Repo.Task.Create] failed to start transaction")
 		return app.NewAppError(http.StatusInternalServerError, "failed to start transaction")
 	}
 
@@ -97,7 +145,7 @@ func (r *TaskRepositoryImpl) Create(task entity.Task) error {
 	var taskId int64
 	err = tx.QueryRow(query, task.Title, task.Description, task.Content, task.Author, task.Author).Scan(&taskId)
 	if err != nil {
-		log.Error("[Repo.Task.Create] failed to insert task, cause: %v", err)
+		log.Error("[Repo.Task.Create] failed to insert task, cause : %s", err.Error())
 		tx.Rollback()
 		return err
 	}
@@ -118,7 +166,7 @@ func (r *TaskRepositoryImpl) Create(task entity.Task) error {
 		sb.WriteString(strings.Join(placeholderStrings, ","))
 
 		if _, err = tx.Exec(sb.String(), values...); err != nil {
-			log.Error("[Repo.Task.Create] failed to insert attachments, cause: %v", err)
+			log.Error("[Repo.Task.Create] failed to insert attachments,cause : %s", err.Error())
 			return app.NewAppError(http.StatusInternalServerError, "failed to insert attachments")
 		}
 	}
@@ -131,29 +179,6 @@ func (r *TaskRepositoryImpl) Update(task entity.Task) error {
 	return nil
 }
 
-// Delete implements TaskRepository.
 func (r *TaskRepositoryImpl) Delete(taskId int32) error {
 	panic("unimplemented")
 }
-
-//if len(tasks) > 0 {
-//		var taskIds []int32
-//		for _, task := range tasks {
-//			taskIds = append(taskIds, task.ID)
-//		}
-//
-//		queryAttachments := "SELECT task_id, type, url FROM task_attachments WHERE task_id IN ($1)"
-//		rows, err := r.db.Query(queryAttachments, taskIds)
-//		if err != nil {
-//			return models.PaginationResponse[entity.TaskResponseDto]{}, app.NewAppError(http.StatusInternalServerError, "failed to get attachments")
-//		}
-//		defer rows.Close()
-//		var attachments []entity.TaskAttachment
-//		for rows.Next() {
-//			var attachment entity.TaskAttachment
-//			if err := rows.Scan(&attachment.TaskId, &attachment.Type, &attachment.Url); err != nil {
-//				return models.PaginationResponse[entity.TaskResponseDto]{}, app.NewAppError(http.StatusInternalServerError, "failed to scan attachment")
-//			}
-//			attachments = append(attachments, attachment)
-//		}
-//	}

@@ -2,8 +2,10 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"mime/multipart"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ghulammuzz/misterblast/helper"
@@ -40,14 +42,14 @@ func (t *TaskServiceImpl) List(request entity.ListTaskRequestDto) (models.Pagina
 	if err != nil {
 		var appErr *app.AppError
 		if !errors.As(err, &appErr) {
+			log2.Errorf("[Svc.Task.List] failed to list tasks, cause: %v", err)
 			return models.PaginationResponse[entity.TaskResponseDto]{}, app.NewAppError(fiber.StatusInternalServerError, "failed to list tasks")
 		}
 		return models.PaginationResponse[entity.TaskResponseDto]{}, appErr
 	}
 	response.Total = queryResponse.Total
 	for i := range queryResponse.Items {
-		timeUnix, _ := strconv.ParseInt(queryResponse.Items[i].LastUpdatedAt, 10, 64)
-		queryResponse.Items[i].LastUpdatedAt = time.Unix(timeUnix, 0).Format("2006-01-02 15:04:05")
+		queryResponse.Items[i].LastUpdatedAt = helper.FormatUnixTime(queryResponse.Items[i].LastUpdatedAt)
 	}
 	response.Items = queryResponse.Items
 
@@ -55,7 +57,17 @@ func (t *TaskServiceImpl) List(request entity.ListTaskRequestDto) (models.Pagina
 }
 
 func (t *TaskServiceImpl) Index(taskId int32) (entity.TaskDetailResponseDto, error) {
-	panic("unimplemented")
+	task, err := t.repo.Index(taskId)
+	if err != nil {
+		var appErr *app.AppError
+		if !errors.As(err, &appErr) {
+			log2.Errorf("[Svc.Task.Index] failed to get task, cause: %v", err)
+			return entity.TaskDetailResponseDto{}, app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
+		}
+		return entity.TaskDetailResponseDto{}, appErr
+	}
+	task.LastUpdatedAt = helper.FormatUnixTime(task.LastUpdatedAt)
+	return task, nil
 }
 
 func (t *TaskServiceImpl) Create(userId int32, task entity.CreateTaskRequestDto) error {
@@ -63,6 +75,7 @@ func (t *TaskServiceImpl) Create(userId int32, task entity.CreateTaskRequestDto)
 	if err != nil {
 		var appErr *app.AppError
 		if !errors.As(err, &appErr) {
+			log2.Errorf("[Svc.Task.Create] failed to upload file, cause: %v", err)
 			return app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
 		}
 		return appErr
@@ -89,22 +102,32 @@ func (t *TaskServiceImpl) uploadFilesToStorageService(files []*multipart.FileHea
 	var attachments []entity.TaskAttachment
 
 	for _, attachment := range files {
+		_, err := helper.GetFileType(attachment)
+		if err != nil {
+			return []entity.TaskAttachment{}, app.NewAppError(fiber.StatusBadRequest, "Invalid file type")
+		}
 		if !helper.ValidateFileSize(attachment, 10*1024*1024) {
 			return []entity.TaskAttachment{}, app.NewAppError(400, "file size is too large")
 		}
+	}
+
+	for _, attachment := range files {
 		response, err := t.storageService.UploadFile(storageEntity.UploadFileRequestDto{
-			Key:  attachment.Filename,
+			Key:  fmt.Sprintf("task-attachments/%s-%s", strconv.Itoa(int(time.Now().Unix())), strings.ReplaceAll("_", " ", attachment.Filename)),
 			File: attachment,
 		})
+
 		if err != nil {
 			var appErr *app.AppError
 			if !errors.As(err, &appErr) {
+				log2.Errorf("[Svc.Task.Create] failed to upload file, cause: %v", err)
 				return []entity.TaskAttachment{}, app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
 			}
 			return []entity.TaskAttachment{}, appErr
 		}
+		extension, _ := helper.GetFileType(attachment)
 		attachments = append(attachments, entity.TaskAttachment{
-			Type: helper.GetFileExtension(attachment),
+			Type: extension,
 			Url:  response.Data.Url,
 		})
 	}

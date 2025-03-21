@@ -25,6 +25,7 @@ func NewTaskHandler(s service.TaskService, val *validator.Validate) *TaskHandler
 
 func (h *TaskHandler) Router(r fiber.Router) {
 	r.Get("/tasks", m.R100(), m.JWTProtected(), h.List)
+	r.Get("/tasks/:id", m.R100(), m.JWTProtected(), h.Index)
 	r.Post("/tasks", m.R100(), m.JWTProtected(), h.CreateTask)
 }
 
@@ -36,13 +37,31 @@ func (h *TaskHandler) List(c *fiber.Ctx) error {
 	tasks, err := h.s.List(listTaskRequestDto)
 	if err != nil {
 		var appErr *app.AppError
-		if errors.As(err, &appErr) {
-			return response.SendError(c, appErr.Code, appErr.Message, appErr.Error())
+		ok := errors.As(err, &appErr)
+		if !ok {
+			appErr = app.ErrInternal
 		}
-		return response.SendError(c, fiber.StatusInternalServerError, "failed to get tasks", nil)
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
 
 	return response.SendSuccess(c, "tasks retrieved successfully", tasks)
+}
+
+func (h *TaskHandler) Index(c *fiber.Ctx) error {
+	taskId, err := c.ParamsInt("id")
+	if err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid Params", nil)
+	}
+	task, err := h.s.Index(int32(taskId))
+	if err != nil {
+		var appErr *app.AppError
+		ok := errors.As(err, &appErr)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+	return response.SendResponse(c, fiber.StatusOK, "Task retrieved", task)
 }
 
 func (h *TaskHandler) CreateTask(c *fiber.Ctx) error {

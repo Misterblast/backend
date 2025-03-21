@@ -1,9 +1,25 @@
 package helper
 
-import "mime/multipart"
+import (
+	"fmt"
+	"mime/multipart"
+	"strings"
+)
 
-func GetFileExtension(file *multipart.FileHeader) string {
-	return file.Filename[len(file.Filename)-4:]
+func GetFileType(file *multipart.FileHeader) (string, error) {
+	filename := file.Filename
+	ext := strings.ToLower(filename[strings.LastIndex(filename, "."):])
+
+	imageExtensions := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
+	}
+
+	if imageExtensions[ext] {
+		return "img", nil
+	} else if ext == ".pdf" {
+		return "pdf", nil
+	}
+	return "", fmt.Errorf("unsupported file type: %s", ext)
 }
 
 func ValidateFileSize(file *multipart.FileHeader, maxSize int64) bool {
