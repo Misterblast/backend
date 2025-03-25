@@ -25,7 +25,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/misterblast/backend:${{ env.SHORT_COMMIT }} .
+          docker build -t ghcr.io/misterblast/backend:${{ env.SHORT_COMMIT }} -f deployment/Dockerfile .
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u misterblast --password-stdin
 
       - name: Push Docker image
