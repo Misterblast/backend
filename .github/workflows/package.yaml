@@ -1,0 +1,33 @@
+name: Relaease ghcr.io
+
+on:
+  workflow_call:
+    
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.23.7'
+
+      - name: Build
+        run: go build -o main cmd/main.go
+
+      - name: Get short commit hash
+        id: vars
+        run: echo "SHORT_COMMIT=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        run: |
+          docker build -t ghcr.io/misterblast/backend:${{ env.SHORT_COMMIT }} -f deployment/Dockerfile .
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u misterblast --password-stdin
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/misterblast/backend:${{ env.SHORT_COMMIT }}
