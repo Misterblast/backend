@@ -1,11 +1,6 @@
 package entity
 
-type TaskAttachment struct {
-	Id     int32  `json:"-" db:"id"`
-	TaskId int32  `json:"-" db:"task_id"`
-	Type   string `json:"type" db:"type"`
-	Url    string `json:"attachment_url" db:"url"`
-}
+import "github.com/ghulammuzz/misterblast/internal/storage/entity"
 
 type Task struct {
 	ID          int32  `db:"id"`
@@ -17,5 +12,5 @@ type Task struct {
 	UpdatedAt   int64  `db:"updated_at"`
 	CreatedAt   int64  `db:"created_at"`
 	DeletedAt   int64  `db:"deleted_at"`
-	Attachments []TaskAttachment
+	Attachments []entity.Attachment
 }

@@ -3,11 +3,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"mime/multipart"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/ghulammuzz/misterblast/helper"
 	"github.com/ghulammuzz/misterblast/internal/models"
 	storageEntity "github.com/ghulammuzz/misterblast/internal/storage/entity"
@@ -17,6 +12,7 @@ import (
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/gofiber/fiber/v2"
 	log2 "github.com/gofiber/fiber/v2/log"
+	"mime/multipart"
 )
 
 type TaskService interface {
@@ -63,7 +59,7 @@ func (t *TaskServiceImpl) Index(taskId int32) (entity.TaskDetailResponseDto, err
 		var appErr *app.AppError
 		if !errors.As(err, &appErr) {
 			log2.Errorf("[Svc.Task.Index] failed to get task, cause: %v", err)
-			return entity.TaskDetailResponseDto{}, app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
+			return entity.TaskDetailResponseDto{}, app.NewAppError(fiber.StatusInternalServerError, "failed to get task")
 		}
 		return entity.TaskDetailResponseDto{}, appErr
 	}
@@ -72,23 +68,14 @@ func (t *TaskServiceImpl) Index(taskId int32) (entity.TaskDetailResponseDto, err
 }
 
 func (t *TaskServiceImpl) Create(userId int32, task entity.CreateTaskRequestDto) error {
-	attachments, err := t.uploadFilesToStorageService(task.Attachments)
-	if err != nil {
-		var appErr *app.AppError
-		if !errors.As(err, &appErr) {
-			log2.Errorf("[Svc.Task.Create] failed to upload file, cause: %v", err)
-			return app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
-		}
-		return appErr
-	}
 	taskEntity := entity.Task{
 		Title:       task.Title,
 		Description: task.Description,
 		Content:     task.Content,
 		Author:      userId,
-		Attachments: attachments,
 	}
-	if err := t.repo.Create(taskEntity); err != nil {
+	taskId, err := t.repo.Create(taskEntity)
+	if err != nil {
 		log2.Errorf("[Svc.Task.Create] failed to create task, cause: %v", err)
 		var appErr *app.AppError
 		if !errors.As(err, &appErr) {
@@ -96,39 +83,50 @@ func (t *TaskServiceImpl) Create(userId int32, task entity.CreateTaskRequestDto)
 		}
 		return err
 	}
+	attachments, err := t.uploadFilesToStorageService(taskId, task.Attachments)
+	if err != nil {
+		log2.Errorf("[Svc.Task.Create] failed to upload file, cause: %v", err)
+	}
+
+	err = t.repo.InsertAttachments(taskId, attachments)
+	if err != nil {
+		log2.Errorf("[Svc.Task.Create] failed to insert attachments, cause: %v", err)
+	}
 	return nil
 }
 
-func (t *TaskServiceImpl) uploadFilesToStorageService(files []*multipart.FileHeader) ([]entity.TaskAttachment, error) {
-	var attachments []entity.TaskAttachment
+func (t *TaskServiceImpl) uploadFilesToStorageService(taskId int64, files []*multipart.FileHeader) ([]storageEntity.Attachment, error) {
 
 	for _, attachment := range files {
 		_, err := helper.GetFileType(attachment)
 		if err != nil {
-			return []entity.TaskAttachment{}, app.NewAppError(fiber.StatusBadRequest, "Invalid file type")
+			return []storageEntity.Attachment{}, app.NewAppError(fiber.StatusBadRequest, "Invalid file type")
 		}
 		if !helper.ValidateFileSize(attachment, 10*1024*1024) {
-			return []entity.TaskAttachment{}, app.NewAppError(400, "file size is too large")
+			return []storageEntity.Attachment{}, app.NewAppError(400, "file size is too large")
 		}
 	}
 
+	var attachments []storageEntity.Attachment
 	for _, attachment := range files {
+		fileType, _ := helper.GetFileType(attachment)
+		key := fmt.Sprintf("task/%s-task/%d", fileType, taskId)
+		log2.Infof("KEY : %s", key)
 		response, err := t.storageService.UploadFile(storageEntity.UploadFileRequestDto{
-			Key:  fmt.Sprintf("task-attachments/%s-%s", strconv.Itoa(int(time.Now().Unix())), strings.ReplaceAll(attachment.Filename, " ", "_")),
+			Key:  key,
 			File: attachment,
 		})
-
+		log2.Infof("RESPONSE : %s", response.Data.Url)
 		if err != nil {
 			var appErr *app.AppError
 			if !errors.As(err, &appErr) {
 				log2.Errorf("[Svc.Task.Create] failed to upload file, cause: %v", err)
-				return []entity.TaskAttachment{}, app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
+				return []storageEntity.Attachment{}, app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
 			}
-			return []entity.TaskAttachment{}, appErr
+			return []storageEntity.Attachment{}, appErr
 		}
-		extension, _ := helper.GetFileType(attachment)
-		attachments = append(attachments, entity.TaskAttachment{
-			Type: extension,
+		attachments = append(attachments, storageEntity.Attachment{
+			Type: fileType,
 			Url:  response.Data.Url,
 		})
 	}

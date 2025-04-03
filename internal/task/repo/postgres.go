@@ -3,22 +3,23 @@ package repo
 import (
 	"database/sql"
 	"fmt"
-	"net/http"
-	"strings"
-
 	"github.com/ghulammuzz/misterblast/internal/models"
+	entity2 "github.com/ghulammuzz/misterblast/internal/storage/entity"
 	"github.com/ghulammuzz/misterblast/internal/task/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"net/http"
+	"strings"
 )
 
 type TaskRepository interface {
 	List(request entity.ListTaskRequestDto) (models.PaginationResponse[entity.TaskResponseDto], error)
-	ListAttachments(taskId int32) ([]entity.TaskAttachment, error)
-	Create(task entity.Task) error
+	ListAttachments(taskId int32) ([]entity2.Attachment, error)
+	Create(task entity.Task) (int64, error)
 	Index(taskId int32) (entity.TaskDetailResponseDto, error)
 	Update(task entity.Task) error
 	Delete(taskId int32) error
+	InsertAttachments(taskId int64, attachments []entity2.Attachment) error
 }
 
 type TaskRepositoryImpl struct {
@@ -121,46 +122,16 @@ func (r *TaskRepositoryImpl) Index(taskId int32) (entity.TaskDetailResponseDto, 
 	return task, nil
 }
 
-func (r *TaskRepositoryImpl) Create(task entity.Task) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		log.Error("[Repo.Task.Create] failed to start transaction")
-		return app.NewAppError(http.StatusInternalServerError, "failed to start transaction")
-	}
-
-	defer tx.Rollback()
+func (r *TaskRepositoryImpl) Create(task entity.Task) (int64, error) {
 	query := "INSERT INTO tasks (title, description, content, author, updated_by) VALUES ($1,$2,$3,$4,$5) RETURNING id"
 	var taskId int64
-	err = tx.QueryRow(query, task.Title, task.Description, task.Content, task.Author, task.Author).Scan(&taskId)
+	err := r.db.QueryRow(query, task.Title, task.Description, task.Content, task.Author, task.Author).Scan(&taskId)
 	if err != nil {
 		log.Error("[Repo.Task.Create] failed to insert task, cause : %s", err.Error())
-		tx.Rollback()
-		return err
+		return 0, err
 	}
 
-	if len(task.Attachments) > 0 {
-		placeholderStrings := make([]string, 0, len(task.Attachments))
-		values := make([]interface{}, 0, len(task.Attachments)*3)
-
-		var sb strings.Builder
-		sb.WriteString("INSERT INTO task_attachments (task_id, type, url) VALUES ")
-
-		placeholderIndex := 1
-		for _, attachment := range task.Attachments {
-			placeholderStrings = append(placeholderStrings, fmt.Sprintf("($%d,$%d,$%d)", placeholderIndex, placeholderIndex+1, placeholderIndex+2))
-			values = append(values, taskId, attachment.Type, attachment.Url)
-			placeholderIndex += 3
-		}
-		sb.WriteString(strings.Join(placeholderStrings, ","))
-
-		if _, err = tx.Exec(sb.String(), values...); err != nil {
-			log.Error("[Repo.Task.Create] failed to insert attachments,cause : %s", err.Error())
-			return app.NewAppError(http.StatusInternalServerError, "failed to insert attachments")
-		}
-	}
-	tx.Commit()
-
-	return nil
+	return taskId, nil
 }
 
 func (r *TaskRepositoryImpl) Update(task entity.Task) error {
@@ -177,18 +148,17 @@ func (r *TaskRepositoryImpl) Delete(taskId int32) error {
 	return nil
 }
 
-func (r *TaskRepositoryImpl) ListAttachments(taskId int32) ([]entity.TaskAttachment, error) {
-	attachments := make([]entity.TaskAttachment, 0)
-	attachmentsQuery := `SELECT type, url FROM task_attachments WHERE task_id = $1`
-	rows, err := r.db.Query(attachmentsQuery, taskId)
+func (r *TaskRepositoryImpl) ListAttachments(taskId int32) ([]entity2.Attachment, error) {
+	var attachments []entity2.Attachment
+	query := "SELECT a.type, a.url FROM task_attachments LEFT JOIN attachments a ON task_attachments.attachment_id = a.id WHERE task_id = $1"
+	rows, err := r.db.Query(query, taskId)
 	if err != nil {
 		log.Error("[Repo][Tasks] failed to query attachments, cause : %s", err.Error())
 		return attachments, app.NewAppError(http.StatusInternalServerError, "failed to get attachments")
 	}
-
 	defer rows.Close()
 	for rows.Next() {
-		var attachment entity.TaskAttachment
+		var attachment entity2.Attachment
 		if err := rows.Scan(&attachment.Type, &attachment.Url); err != nil {
 			log.Error("[Repo][Tasks] failed to scan attachments, cause : %s", err.Error())
 			return attachments, app.NewAppError(http.StatusInternalServerError, "failed to scan attachment")
@@ -196,4 +166,53 @@ func (r *TaskRepositoryImpl) ListAttachments(taskId int32) ([]entity.TaskAttachm
 		attachments = append(attachments, attachment)
 	}
 	return attachments, nil
+}
+
+func (r *TaskRepositoryImpl) InsertAttachments(taskId int64, attachments []entity2.Attachment) error {
+	var attachmentIds []int64
+	query := "INSERT INTO attachments (type, url) VALUES "
+	var values []interface{}
+	var placeholders []string
+
+	for i, attachment := range attachments {
+		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
+		values = append(values, attachment.Type, attachment.Url)
+	}
+
+	query += strings.Join(placeholders, ", ") + " RETURNING id"
+
+	rows, err := r.db.Query(query, values...)
+	if err != nil {
+		log.Error("[Repo.Task.Create] failed to insert attachments, cause: %s", err.Error())
+		return app.NewAppError(http.StatusInternalServerError, "failed to insert attachments")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			log.Error("[Repo.Task.Create] failed to scan attachment ID, cause: %s", err.Error())
+			return app.NewAppError(http.StatusInternalServerError, "failed to retrieve attachment IDs")
+		}
+		attachmentIds = append(attachmentIds, id)
+	}
+
+	query = "INSERT INTO task_attachments (task_id, attachment_id) VALUES "
+	values = []interface{}{}
+	placeholders = []string{}
+
+	for i, attachmentId := range attachmentIds {
+		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
+		values = append(values, taskId, attachmentId)
+	}
+
+	query += strings.Join(placeholders, ", ")
+
+	_, err = r.db.Exec(query, values...)
+	if err != nil {
+		log.Error("[Repo.Task.Create] failed to insert task_attachments, cause: %s", err.Error())
+		return app.NewAppError(http.StatusInternalServerError, "failed to insert task attachments")
+	}
+
+	return nil
 }
