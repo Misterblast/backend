@@ -9,10 +9,15 @@ type QuizService interface {
 	SubmitQuiz(req quizEntity.QuizSubmit, setID int, userID int) error
 	ListAdmin(filter map[string]string, page int, limit int) ([]quizEntity.ListQuizSubmissionAdmin, error)
 	List(filter map[string]string, page int, limit int, userID int) ([]quizEntity.ListQuizSubmission, error)
+	GetResult(userID int) (quizEntity.QuizExp, error)
 }
 
 type quizService struct {
 	repo quizRepo.QuizRepository
+}
+
+func (s *quizService) GetResult(userID int) (quizEntity.QuizExp, error) {
+	return s.repo.GetLast(userID)
 }
 
 func NewQuizService(repo quizRepo.QuizRepository) QuizService {

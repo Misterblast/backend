@@ -27,6 +27,8 @@ func (h *QuizHandler) Router(r fiber.Router) {
 	r.Get("/quiz-submission-admin", m.R100(), h.AdminQuizSubmissionHandler)
 	r.Get("/quiz-submission", m.JWTProtected(), m.R100(), h.QuizSubmissionHandler)
 
+	r.Get("/quiz-result", m.JWTProtected(), m.R100(), h.GetResultHandler)
+
 }
 
 func (h *QuizHandler) SubmitQuizHandler(c *fiber.Ctx) error {
@@ -123,4 +125,27 @@ func (h *QuizHandler) QuizSubmissionHandler(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "quiz admin retrieved successfully", quiz)
+}
+
+func (h *QuizHandler) GetResultHandler(c *fiber.Ctx) error {
+	userToken := c.Locals("user").(*jwt.Token)
+
+	claims, ok := userToken.Claims.(jwt.MapClaims)
+	if !ok || !userToken.Valid {
+		log.Error("Invalid token")
+		return response.SendError(c, fiber.StatusUnauthorized, "Invalid token", nil)
+	}
+
+	userID := int(claims["user_id"].(float64))
+
+	quiz, err := h.quizService.GetResult(userID)
+	if err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "quiz result retrieved successfully", quiz)
 }

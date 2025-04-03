@@ -7,3 +7,7 @@ migrations/v1.sql
 stg.env
 api.spec
 dbeaver.doceker-compose.yaml
+internal/TASKS
+internal/TASKS.txt
+deployment/docker-compose.dev.yaml
+Dockerfile

@@ -13,6 +13,7 @@ require (
 	github.com/grafana/loki-client-go v0.0.0-20240913122146-e119d400c3a5
 	github.com/joho/godotenv v1.3.0
 	github.com/lib/pq v1.10.9
+	github.com/prometheus/client_golang v1.20.4
 	github.com/samber/slog-loki/v3 v3.5.4
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.35.0
@@ -51,7 +52,6 @@ require (
 	github.com/philhofer/fwd v1.1.3-0.20240916144458-20a13a1f6b7c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.20.4 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.61.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
