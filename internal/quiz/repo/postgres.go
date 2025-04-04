@@ -9,12 +9,13 @@ import (
 	quizEntity "github.com/ghulammuzz/misterblast/internal/quiz/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
 type QuizRepository interface {
 	Submit(req quizEntity.QuizSubmit, setId int, userId int) error
 	List(filter map[string]string, page, limit, userID int) ([]quizEntity.ListQuizSubmission, error)
-	ListAdmin(filter map[string]string, page, limit int) ([]quizEntity.ListQuizSubmissionAdmin, error)
+	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	GetLast(userID int) (quizEntity.QuizExp, error)
 }
 
