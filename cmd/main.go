@@ -1,10 +1,15 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/ghulammuzz/misterblast/internal/storage/di"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	mlog "log/slog"
 
@@ -19,8 +24,10 @@ import (
 	set "github.com/ghulammuzz/misterblast/internal/set/di"
 	task "github.com/ghulammuzz/misterblast/internal/task/di"
 	user "github.com/ghulammuzz/misterblast/internal/user/di"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	metrics "github.com/ghulammuzz/misterblast/pkg/prom"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 )
@@ -56,8 +63,35 @@ func main() {
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
 	})
+
+	app.Use(func(c *fiber.Ctx) error {
+		start := time.Now()
+
+		err := c.Next()
+
+		duration := time.Since(start).Seconds()
+		path := c.Path()
+		method := c.Method()
+		status := fmt.Sprintf("%d", c.Response().StatusCode())
+
+		metrics.RequestCounter.WithLabelValues(path, method).Inc()
+		metrics.RequestDuration.WithLabelValues(path, method).Observe(duration)
+
+		if err != nil {
+			metrics.ErrorCounter.WithLabelValues(path, method, status).Inc()
+		}
+
+		return err
+	})
+
 	log.Info(os.Getenv("JWT_SECRET"))
 	app.Get("/hc", health.HealthCheck(db))
+	// app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+	http.Handle("/metrics", promhttp.Handler())
+	promServer := &http.Server{
+		Addr: ":3002",
+	}
+
 	api := app.Group("/api")
 	client := fiber.Client{}
 	storageSvc := di.InitializeStorageService(&client)
@@ -70,7 +104,45 @@ func main() {
 	email.InitializedEmailService(db, validator.Validate).Router(api)
 	quiz.InitializedQuizService(db, validator.Validate).Router(api)
 	task.InitializeTaskService(db, validator.Validate, storageSvc, storageRepo).Router(api)
-	if err := app.Listen(fmt.Sprint(":", os.Getenv("APP_PORT"))); err != nil {
-		log.Error("Failed to start the server: %v", err)
+
+	app.Get("/routes", func(c *fiber.Ctx) error {
+		routes := app.Stack()
+		uniqueRoutes := make(map[string]bool)
+		var result string
+
+		for _, handlers := range routes {
+			for _, route := range handlers {
+				routeKey := fmt.Sprintf(" %s", route.Path)
+				if !uniqueRoutes[routeKey] {
+					uniqueRoutes[routeKey] = true
+					result += routeKey + "\n"
+				}
+			}
+		}
+
+		return c.SendString(result)
+	})
+	go func() {
+		log.Info("Listening and serving prometheus exporter", mlog.Int("port", 3002))
+		if err := promServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("failed listening prometheus exporter", mlog.Any("err", err))
+			panic(err)
+		}
+	}()
+	go func() {
+		if err := app.Listen(fmt.Sprintf(":%s", os.Getenv("APP_PORT"))); err != nil {
+			log.Error("Error starting server: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Info("Server is shutting down...")
+
+	if err := app.Shutdown(); err != nil {
+		log.Info("Server forced to shutdown: %v", err)
 	}
+	log.Info("Server exited properly")
+
 }

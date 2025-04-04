@@ -4,6 +4,7 @@ import (
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/internal/question/repo"
 	"github.com/ghulammuzz/misterblast/pkg/app"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
 type QuestionService interface {
@@ -21,7 +22,7 @@ type QuestionService interface {
 	EditQuizAnswer(id int32, answer questionEntity.EditAnswer) error
 
 	// Admin
-	ListAdmin(filter map[string]string, page, limit int) ([]questionEntity.ListQuestionAdmin, error)
+	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 }
 
 type questionService struct {
@@ -67,7 +68,7 @@ func (s *questionService) ListQuizQuestions(filter map[string]string) ([]questio
 
 // admin
 
-func (s *questionService) ListAdmin(filter map[string]string, page, limit int) ([]questionEntity.ListQuestionAdmin, error) {
+func (s *questionService) ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	questions, err := s.repo.ListAdmin(filter, page, limit)
 	if err != nil {
 		return nil, err

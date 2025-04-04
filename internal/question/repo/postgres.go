@@ -7,6 +7,7 @@ import (
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
 type QuestionRepository interface {
@@ -25,7 +26,7 @@ type QuestionRepository interface {
 	EditAnswer(id int32, answer questionEntity.EditAnswer) error
 
 	// Admin
-	ListAdmin(filter map[string]string, page, limit int) ([]questionEntity.ListQuestionAdmin, error)
+	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 }
 
 type questionRepository struct {

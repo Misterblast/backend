@@ -4,6 +4,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type PaginateResponse struct {
+	Total int64       `json:"total"`
+	Page  int         `json:"page"`
+	Limit int         `json:"limit"`
+	Data  interface{} `json:"data"`
+}
 type Response struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`

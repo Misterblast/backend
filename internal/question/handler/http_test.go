@@ -13,6 +13,7 @@ import (
 
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/internal/question/handler"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -55,9 +56,9 @@ func (m *MockQuestionService) ListQuizQuestions(filter map[string]string) ([]que
 	return args.Get(0).([]questionEntity.ListQuestionQuiz), args.Error(1)
 }
 
-func (m *MockQuestionService) ListAdmin(filter map[string]string, page, limit int) ([]questionEntity.ListQuestionAdmin, error) {
+func (m *MockQuestionService) ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	args := m.Called(filter, page, limit)
-	return args.Get(0).([]questionEntity.ListQuestionAdmin), args.Error(1)
+	return args.Get(0).(*response.PaginateResponse), args.Error(1)
 }
 
 func (m *MockQuestionService) DetailQuestion(id int32) (questionEntity.DetailQuestionExample, error) {

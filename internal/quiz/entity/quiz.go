@@ -31,6 +31,7 @@ type ListQuizSubmissionAdmin struct {
 }
 
 type QuizExp struct {
+	ID          int          `json:"id"`
 	Grade       string       `json:"grade"`
 	SubmittedAt int64        `json:"submitted_at"`
 	Correct     int          `json:"correct"`
@@ -40,12 +41,12 @@ type QuizExp struct {
 }
 
 type QuizExpObj struct {
-	Number        string `json:"number"`
-	UserCode      string `json:"user_code"`
-	ActualCode    string `json:"actual_code"`
-	UserContent   string `json:"user_content"`
-	ActualContent string `json:"actual_content"`
-	UserAnswer    string `json:"user_answer"`
-	TF            string `json:"tf"`
-	Explanation   string `json:"explanation"`
+	Number          int    `json:"number"`
+	UserCode        string `json:"user_code"`
+	ActualCode      string `json:"actual_code"`
+	UserContent     string `json:"user_content"`
+	ActualContent   string `json:"actual_content"`
+	QuestionContent string `json:"question_content"`
+	IsCorrect       bool   `json:"is_correct"`
+	Explanation     string `json:"explanation"`
 }

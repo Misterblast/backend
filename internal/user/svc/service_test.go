@@ -9,6 +9,7 @@ import (
 	emailEntity "github.com/ghulammuzz/misterblast/internal/email/entity"
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	userSvc "github.com/ghulammuzz/misterblast/internal/user/svc"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
 type MockUserRepository struct {
@@ -71,9 +72,9 @@ func (m *MockUserRepository) GetIDByEmail(email string) (int32, error) {
 	return args.Get(0).(int32), args.Error(1)
 }
 
-func (m *MockUserRepository) List(filter map[string]string, page, limit int) ([]userEntity.ListUser, error) {
+func (m *MockUserRepository) List(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	args := m.Called(filter, page, limit)
-	return args.Get(0).([]userEntity.ListUser), args.Error(1)
+	return args.Get(0).(*response.PaginateResponse), args.Error(1)
 }
 
 func (m *MockUserRepository) GetDeeplink(token string) (emailEntity.DeeplinkResponse, error) {
@@ -171,13 +172,33 @@ func TestUserService_ListUser(t *testing.T) {
 
 	filter := map[string]string{"role": "user"}
 	page, limit := 1, 10
-	mockUsers := []userEntity.ListUser{{ID: 1, Name: "John Doe", Email: "john@example.com"}}
+	mockUsers := []userEntity.ListUser{
+		{ID: 1, Name: "John Doe", Email: "john@example.com"},
+	}
 
-	mockRepo.On("List", filter, page, limit).Return(mockUsers, nil)
+	mockResponse := &response.PaginateResponse{
+		Total: int64(len(mockUsers)),
+		Page:  page,
+		Limit: limit,
+		Data:  mockUsers,
+	}
+
+	mockRepo.On("List", filter, page, limit).Return(mockResponse, nil)
 
 	resp, err := service.ListUser(filter, page, limit)
+
 	assert.NoError(t, err)
-	assert.Equal(t, mockUsers, resp)
+	assert.NotNil(t, resp)
+	assert.Equal(t, int64(len(mockUsers)), resp.Total)
+	assert.Equal(t, page, resp.Page)
+	assert.Equal(t, limit, resp.Limit)
+	assert.Len(t, resp.Data, len(mockUsers))
+
+	users, ok := resp.Data.([]userEntity.ListUser)
+	assert.True(t, ok)
+	assert.Equal(t, "John Doe", users[0].Name)
+	assert.Equal(t, "john@example.com", users[0].Email)
+
 	mockRepo.AssertExpectations(t)
 }
 
