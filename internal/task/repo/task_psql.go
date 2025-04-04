@@ -19,7 +19,7 @@ type TaskRepository interface {
 	Index(taskId int32) (entity.TaskDetailResponseDto, error)
 	Update(task entity.Task) error
 	Delete(taskId int32) error
-	InsertAttachments(taskId int64, attachments []entity2.Attachment) error
+	InsertAttachments(taskId int64, attachmentIds []int64) error
 }
 
 type TaskRepositoryImpl struct {
@@ -135,6 +135,17 @@ func (r *TaskRepositoryImpl) Create(task entity.Task) (int64, error) {
 }
 
 func (r *TaskRepositoryImpl) Update(task entity.Task) error {
+	query := `UPDATE tasks SET title = $1, description = $2, content = $3, updated_by = $4, updated_at = EXTRACT(EPOCH FROM NOW()) WHERE id = $5`
+	res, err := r.db.Exec(query, task.Title, task.Description, task.Content, task.UpdatedBy, task.ID)
+	if err != nil {
+		log.Error("[Repo.Task.Update] failed to update task, cause: %s", err.Error())
+		return app.NewAppError(http.StatusInternalServerError, "failed to update task")
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return app.NewAppError(http.StatusNotFound, "task not found")
+	}
+
 	return nil
 }
 
@@ -168,38 +179,10 @@ func (r *TaskRepositoryImpl) ListAttachments(taskId int32) ([]entity2.Attachment
 	return attachments, nil
 }
 
-func (r *TaskRepositoryImpl) InsertAttachments(taskId int64, attachments []entity2.Attachment) error {
-	var attachmentIds []int64
-	query := "INSERT INTO attachments (type, url) VALUES "
+func (r *TaskRepositoryImpl) InsertAttachments(taskId int64, attachmentIds []int64) error {
+	query := "INSERT INTO task_attachments (task_id, attachment_id) VALUES "
 	var values []interface{}
 	var placeholders []string
-
-	for i, attachment := range attachments {
-		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
-		values = append(values, attachment.Type, attachment.Url)
-	}
-
-	query += strings.Join(placeholders, ", ") + " RETURNING id"
-
-	rows, err := r.db.Query(query, values...)
-	if err != nil {
-		log.Error("[Repo.Task.Create] failed to insert attachments, cause: %s", err.Error())
-		return app.NewAppError(http.StatusInternalServerError, "failed to insert attachments")
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			log.Error("[Repo.Task.Create] failed to scan attachment ID, cause: %s", err.Error())
-			return app.NewAppError(http.StatusInternalServerError, "failed to retrieve attachment IDs")
-		}
-		attachmentIds = append(attachmentIds, id)
-	}
-
-	query = "INSERT INTO task_attachments (task_id, attachment_id) VALUES "
-	values = []interface{}{}
-	placeholders = []string{}
 
 	for i, attachmentId := range attachmentIds {
 		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
@@ -208,8 +191,7 @@ func (r *TaskRepositoryImpl) InsertAttachments(taskId int64, attachments []entit
 
 	query += strings.Join(placeholders, ", ")
 
-	_, err = r.db.Exec(query, values...)
-	if err != nil {
+	if _, err := r.db.Exec(query, values...); err != nil {
 		log.Error("[Repo.Task.Create] failed to insert task_attachments, cause: %s", err.Error())
 		return app.NewAppError(http.StatusInternalServerError, "failed to insert task attachments")
 	}

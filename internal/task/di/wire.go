@@ -5,6 +5,7 @@ package di
 
 import (
 	"database/sql"
+	repo2 "github.com/ghulammuzz/misterblast/internal/storage/repo"
 
 	"github.com/ghulammuzz/misterblast/internal/storage/svc"
 	"github.com/ghulammuzz/misterblast/internal/task/handler"
@@ -15,7 +16,7 @@ import (
 	"github.com/google/wire"
 )
 
-func InitializeTaskService(sb *sql.DB, val *validator.Validate, storageService svc.StorageService) *handler.TaskHandler {
+func InitializeTaskService(sb *sql.DB, val *validator.Validate, storageService svc.StorageService, storageRepo repo2.StorageRepository) *handler.TaskHandler {
 	wire.Build(
 		handler.NewTaskHandler,
 		service.NewTaskService,

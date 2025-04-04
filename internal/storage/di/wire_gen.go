@@ -7,6 +7,8 @@
 package di
 
 import (
+	"database/sql"
+	"github.com/ghulammuzz/misterblast/internal/storage/repo"
 	"github.com/ghulammuzz/misterblast/internal/storage/svc"
 	"github.com/gofiber/fiber/v2"
 )
@@ -16,4 +18,9 @@ import (
 func InitializeStorageService(client *fiber.Client) svc.StorageService {
 	storageService := svc.NewStorageService(client)
 	return storageService
+}
+
+func InitializeStorageRepository(db *sql.DB) repo.StorageRepository {
+	storageRepository := repo.NewStorageRepository(db)
+	return storageRepository
 }

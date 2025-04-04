@@ -1,8 +1,9 @@
 package entity
 
 import (
-	entity2 "github.com/ghulammuzz/misterblast/internal/storage/entity"
 	"mime/multipart"
+
+	entity2 "github.com/ghulammuzz/misterblast/internal/storage/entity"
 
 	"github.com/ghulammuzz/misterblast/internal/user/entity"
 )
@@ -23,6 +24,11 @@ type UpdateTaskRequestDto struct {
 	Title       string                  `form:"title"`
 	Description string                  `form:"description"`
 	Content     string                  `form:"content"`
+	Attachments []*multipart.FileHeader `form:"attachments"`
+}
+
+type SubmitTaskRequestDto struct {
+	Answer      string                  `form:"answer"`
 	Attachments []*multipart.FileHeader `form:"attachments"`
 }
 
