@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 
-	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	emailEntity "github.com/ghulammuzz/misterblast/internal/email/entity"
+	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -15,7 +16,7 @@ type UserRepository interface {
 	Add(user userEntity.Register, IsVerified bool) error
 	Check(user userEntity.UserLogin) (*userEntity.UserJWT, error)
 	Exists(id int32) (bool, error)
-	List(filter map[string]string, page, limit int) ([]userEntity.ListUser, error)
+	List(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	Detail(id int32) (userEntity.DetailUser, error)
 	Edit(id int32, user userEntity.EditUser) error
 	Delete(id int32) error
@@ -76,18 +77,29 @@ func (r *userRepository) Check(user userEntity.UserLogin) (*userEntity.UserJWT, 
 	return &userResult, nil
 }
 
-func (r *userRepository) List(filter map[string]string, page, limit int) ([]userEntity.ListUser, error) {
-	query := `SELECT id, name, email, COALESCE(img_url, '') FROM users WHERE 1=1`
-	args := []interface{}{limit, (page - 1) * limit}
-	argCount := 2
+func (r *userRepository) List(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
+	baseQuery := `FROM users WHERE 1=1`
+	args := []interface{}{}
+	argCount := 1
 
+	// Handle pencarian (search)
+	searchClause := ""
 	if search, exists := filter["search"]; exists && search != "" {
-		query += ` AND (LOWER(name) LIKE LOWER($` + fmt.Sprintf("%d", argCount+1) + `) OR LOWER(email) LIKE LOWER($` + fmt.Sprintf("%d", argCount+2) + `))`
+		searchClause = ` AND (LOWER(name) LIKE LOWER($` + fmt.Sprintf("%d", argCount) + `) OR LOWER(email) LIKE LOWER($` + fmt.Sprintf("%d", argCount+1) + `))`
 		args = append(args, "%"+search+"%", "%"+search+"%")
 		argCount += 2
 	}
 
-	query += ` LIMIT $1 OFFSET $2`
+	// Query untuk menghitung total user sebelum pagination
+	countQuery := `SELECT COUNT(*) ` + baseQuery + searchClause
+	var total int64
+	if err := r.DB.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, app.NewAppError(500, "failed to count users")
+	}
+
+	// Query untuk mengambil user dengan pagination
+	query := `SELECT id, name, email, COALESCE(img_url, '') ` + baseQuery + searchClause + ` ORDER BY id LIMIT $` + fmt.Sprintf("%d", argCount) + ` OFFSET $` + fmt.Sprintf("%d", argCount+1)
+	args = append(args, limit, (page-1)*limit)
 
 	rows, err := r.DB.Query(query, args...)
 	if err != nil {
@@ -103,7 +115,15 @@ func (r *userRepository) List(filter map[string]string, page, limit int) ([]user
 		}
 		users = append(users, user)
 	}
-	return users, nil
+
+	response := &response.PaginateResponse{
+		Total: total,
+		Page:  page,
+		Limit: limit,
+		Data:  users,
+	}
+
+	return response, nil
 }
 
 func (r *userRepository) Detail(id int32) (userEntity.DetailUser, error) {

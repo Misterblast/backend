@@ -4,13 +4,14 @@ import (
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	userRepo "github.com/ghulammuzz/misterblast/internal/user/repo"
 	"github.com/ghulammuzz/misterblast/pkg/jwt"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
 type UserService interface {
 	Register(user userEntity.Register) error
 	RegisterAdmin(user userEntity.RegisterAdmin) error
 	Login(user userEntity.UserLogin) (*userEntity.LoginResponse, string, error)
-	ListUser(filter map[string]string, page, limit int) ([]userEntity.ListUser, error)
+	ListUser(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	DetailUser(id int32) (userEntity.DetailUser, error)
 	AuthUser(id int32) (userEntity.UserAuth, error)
 	EditUser(id int32, user userEntity.EditUser) error
@@ -47,7 +48,7 @@ func (s *userService) Login(user userEntity.UserLogin) (*userEntity.LoginRespons
 	return &userResponse, token, nil
 }
 
-func (s *userService) ListUser(filter map[string]string, page, limit int) ([]userEntity.ListUser, error) {
+func (s *userService) ListUser(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	return s.userRepo.List(filter, page, limit)
 }
 

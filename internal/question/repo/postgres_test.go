@@ -69,17 +69,30 @@ func TestListAdmin(t *testing.T) {
 
 	repository := repo.NewQuestionRepository(db)
 
+	// Mock total count query
+	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM questions`).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+
+	// Mock data query
 	mockRows := sqlmock.NewRows([]string{"id", "number", "type", "format", "content", "explanation", "is_quiz", "set_id", "set_name", "lesson_name", "class_name"}).
 		AddRow(1, 1, "c4_faktual", "mm", "Question 1", "exp-1", true, 1, "Set 1", "Lesson 1", "Class 1")
 
 	mock.ExpectQuery(`SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id`).
 		WillReturnRows(mockRows)
 
-	questions, err := repository.ListAdmin(map[string]string{}, 1, 10)
+	result, err := repository.ListAdmin(map[string]string{}, 1, 10)
 
 	assert.NoError(t, err)
-	assert.Len(t, questions, 1)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(1), result.Total)
+	assert.Equal(t, 1, result.Page)
+	assert.Equal(t, 10, result.Limit)
+	assert.Len(t, result.Data, 1)
+
+	questions, ok := result.Data.([]questionEntity.ListQuestionAdmin)
+	assert.True(t, ok)
 	assert.Equal(t, "Question 1", questions[0].Content)
+
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 

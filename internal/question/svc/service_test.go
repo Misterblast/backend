@@ -5,6 +5,7 @@ import (
 
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/internal/question/svc"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -54,9 +55,9 @@ func (m *MockQuestionRepo) ListQuizQuestions(filter map[string]string) ([]questi
 	return args.Get(0).([]questionEntity.ListQuestionQuiz), args.Error(1)
 }
 
-func (m *MockQuestionRepo) ListAdmin(filter map[string]string, page, limit int) ([]questionEntity.ListQuestionAdmin, error) {
+func (m *MockQuestionRepo) ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	args := m.Called(filter, page, limit)
-	return args.Get(0).([]questionEntity.ListQuestionAdmin), args.Error(1)
+	return args.Get(0).(*response.PaginateResponse), args.Error(1)
 }
 
 func (m *MockQuestionRepo) Edit(id int32, question questionEntity.EditQuestion) error {
@@ -74,15 +75,31 @@ func TestListAdminService(t *testing.T) {
 	service := svc.NewQuestionService(mockRepo)
 
 	mockData := []questionEntity.ListQuestionAdmin{
-		{ID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Question 1", IsQuiz: true, SetID: 1, SetName: "Set 1", LessonName: "Lesson 1", ClassName: "Class 1", },
+		{ID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Question 1", IsQuiz: true, SetID: 1, SetName: "Set 1", LessonName: "Lesson 1", ClassName: "Class 1"},
 	}
 
-	mockRepo.On("ListAdmin", mock.Anything, 1, 10).Return(mockData, nil)
+	mockResponse := &response.PaginateResponse{
+		Total: 1,
+		Page:  1,
+		Limit: 10,
+		Data:  mockData,
+	}
 
-	questions, err := service.ListAdmin(map[string]string{}, 1, 10)
+	mockRepo.On("ListAdmin", mock.Anything, 1, 10).Return(mockResponse, nil)
+
+	result, err := service.ListAdmin(map[string]string{}, 1, 10)
 	assert.NoError(t, err)
-	assert.Len(t, questions, 1)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(1), result.Total) // Mengecek total data
+	assert.Equal(t, 1, result.Page)
+	assert.Equal(t, 10, result.Limit)
+	assert.Len(t, result.Data, 1)
+
+	questions, ok := result.Data.([]questionEntity.ListQuestionAdmin)
+	assert.True(t, ok)
 	assert.Equal(t, "Question 1", questions[0].Content)
+
+	mockRepo.AssertExpectations(t)
 }
 
 func TestDetailQuestionService(t *testing.T) {

@@ -6,12 +6,11 @@ import (
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
-func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int) ([]questionEntity.ListQuestionAdmin, error) {
-	query := `
-		SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id,
-			   s.name AS set_name, l.name AS lesson_name, c.name AS class_name
+func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
+	baseQuery := `
 		FROM questions q
 		JOIN sets s ON q.set_id = s.id
 		JOIN lessons l ON s.lesson_id = l.id
@@ -19,31 +18,44 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 		WHERE 1=1
 	`
 
+	whereClause := ""
 	args := []interface{}{}
 	argCounter := 1
 
 	if isQuiz, exists := filter["is_quiz"]; exists {
-		query += fmt.Sprintf(" AND q.is_quiz = $%d", argCounter)
+		whereClause += fmt.Sprintf(" AND q.is_quiz = $%d", argCounter)
 		args = append(args, isQuiz)
 		argCounter++
 	}
 	if lesson, exists := filter["lesson"]; exists {
-		query += fmt.Sprintf(" AND l.name = $%d", argCounter)
+		whereClause += fmt.Sprintf(" AND l.name = $%d", argCounter)
 		args = append(args, lesson)
 		argCounter++
 	}
 	if class, exists := filter["class"]; exists {
-		query += fmt.Sprintf(" AND c.name = $%d", argCounter)
+		whereClause += fmt.Sprintf(" AND c.name = $%d", argCounter)
 		args = append(args, class)
 		argCounter++
 	}
 	if set, exists := filter["set"]; exists {
-		query += fmt.Sprintf(" AND s.name = $%d", argCounter)
+		whereClause += fmt.Sprintf(" AND s.name = $%d", argCounter)
 		args = append(args, set)
 		argCounter++
 	}
 
-	query += " ORDER BY q.number"
+	// Count total
+	countQuery := "SELECT COUNT(*) " + baseQuery + whereClause
+	var total int64
+	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		log.Error("[Repo][ListAdmin] Error Count Query:", err)
+		return nil, app.NewAppError(500, "failed to count admin questions")
+	}
+
+	// Query data with pagination
+	query := `
+		SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id,
+			   s.name AS set_name, l.name AS lesson_name, c.name AS class_name
+	` + baseQuery + whereClause + " ORDER BY q.number"
 
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT $%d", argCounter)
@@ -64,7 +76,6 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 	defer rows.Close()
 
 	var questions []questionEntity.ListQuestionAdmin
-
 	for rows.Next() {
 		var q questionEntity.ListQuestionAdmin
 		err := rows.Scan(&q.ID, &q.Number, &q.Type, &q.Format, &q.Content, &q.Explanation, &q.IsQuiz, &q.SetID, &q.SetName, &q.LessonName, &q.ClassName)
@@ -75,5 +86,12 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 		questions = append(questions, q)
 	}
 
-	return questions, nil
+	response := &response.PaginateResponse{
+		Total: total,
+		Page:  page,
+		Limit: limit,
+		Data:  questions,
+	}
+
+	return response, nil
 }
