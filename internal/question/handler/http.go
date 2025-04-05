@@ -195,6 +195,9 @@ func (h *QuestionHandler) ListQuestionAdminHandler(c *fiber.Ctx) error {
 	if c.Query("set") != "" {
 		filter["set"] = c.Query("set")
 	}
+	// if c.Query("search") != "" {
+	// 	filter["search"] = c.Query("search")
+	// }
 
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)

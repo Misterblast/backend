@@ -8,19 +8,17 @@ package di
 
 import (
 	"database/sql"
-	"github.com/ghulammuzz/misterblast/internal/storage/repo"
-	"github.com/ghulammuzz/misterblast/internal/storage/svc"
 	"github.com/ghulammuzz/misterblast/internal/task/handler"
-	repo2 "github.com/ghulammuzz/misterblast/internal/task/repo"
+	"github.com/ghulammuzz/misterblast/internal/task/repo"
 	"github.com/ghulammuzz/misterblast/internal/task/svc"
 	"github.com/go-playground/validator/v10"
 )
 
 // Injectors from wire.go:
 
-func InitializeTaskService(sb *sql.DB, val *validator.Validate, storageService svc.StorageService, storageRepo repo.StorageRepository) *handler.TaskHandler {
-	taskRepository := repo2.NewTaskRepository(sb)
-	taskService := service.NewTaskService(taskRepository, storageService, storageRepo)
+func InitializeTaskService(sb *sql.DB, val *validator.Validate) *handler.TaskHandler {
+	taskRepository := repo.NewTaskRepository(sb)
+	taskService := service.NewTaskService(taskRepository)
 	taskHandler := handler.NewTaskHandler(taskService, val)
 	return taskHandler
 }

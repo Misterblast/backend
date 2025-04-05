@@ -1,178 +1,56 @@
 package service
 
 import (
-	"errors"
-	"fmt"
-	"github.com/ghulammuzz/misterblast/helper"
-	"github.com/ghulammuzz/misterblast/internal/models"
-	storageEntity "github.com/ghulammuzz/misterblast/internal/storage/entity"
-	repo2 "github.com/ghulammuzz/misterblast/internal/storage/repo"
-	"github.com/ghulammuzz/misterblast/internal/storage/svc"
 	"github.com/ghulammuzz/misterblast/internal/task/entity"
 	"github.com/ghulammuzz/misterblast/internal/task/repo"
-	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/gofiber/fiber/v2"
-	log2 "github.com/gofiber/fiber/v2/log"
-	"mime/multipart"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
 type TaskService interface {
-	Create(userId int32, task entity.CreateTaskRequestDto) error
-	List(request entity.ListTaskRequestDto) (models.PaginationResponse[entity.TaskResponseDto], error)
+	Create(task entity.CreateTaskRequestDto) error
+	List(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	Index(taskId int32) (entity.TaskDetailResponseDto, error)
 	Delete(taskId int32) error
 	Update(taskId int32, task entity.UpdateTaskRequestDto) error
 }
 
 type TaskServiceImpl struct {
-	repo              repo.TaskRepository
-	storageRepository repo2.StorageRepository
-	storageService    svc.StorageService
+	repo repo.TaskRepository
 }
 
-func NewTaskService(repo repo.TaskRepository, storageService svc.StorageService, storageRepository repo2.StorageRepository) TaskService {
-	return &TaskServiceImpl{repo: repo, storageService: storageService, storageRepository: storageRepository}
+func NewTaskService(repo repo.TaskRepository) TaskService {
+	return &TaskServiceImpl{repo: repo}
 }
 
 func (t *TaskServiceImpl) Update(taskId int32, task entity.UpdateTaskRequestDto) error {
-	if err := t.repo.Update(entity.Task{
+	return t.repo.Update(entity.Task{
 		ID:          taskId,
 		Title:       task.Title,
 		Description: task.Description,
 		Content:     task.Content,
-	}); err != nil {
-		log2.Errorf("[Svc.Task.Update] failed to update task, cause: %v", err)
-		var appErr *app.AppError
-		if !errors.As(err, &appErr) {
-			return app.NewAppError(fiber.StatusInternalServerError, "failed to update task")
-		}
-		return appErr
-	}
-	//attachments, err := t.repo.ListAttachments(taskId)
-	//if err != nil {
-	//	log2.Errorf("[Svc.Task.Update] failed to list attachments, cause: %v", err)
-	//}
-	//for _, attachment := range attachments {
-	//
-	//}
-	return nil
+	})
+
 }
 
-func (t *TaskServiceImpl) List(request entity.ListTaskRequestDto) (models.PaginationResponse[entity.TaskResponseDto], error) {
-	var response models.PaginationResponse[entity.TaskResponseDto]
-	response.Limit = 10
-	response.Page = int(request.Page)
-	queryResponse, err := t.repo.List(request)
-	if err != nil {
-		var appErr *app.AppError
-		if !errors.As(err, &appErr) {
-			log2.Errorf("[Svc.Task.List] failed to list tasks, cause: %v", err)
-			return models.PaginationResponse[entity.TaskResponseDto]{}, app.NewAppError(fiber.StatusInternalServerError, "failed to list tasks")
-		}
-		return models.PaginationResponse[entity.TaskResponseDto]{}, appErr
-	}
-	response.Total = queryResponse.Total
-	for i := range queryResponse.Items {
-		queryResponse.Items[i].LastUpdatedAt = helper.FormatUnixTime(queryResponse.Items[i].LastUpdatedAt)
-	}
-	response.Items = queryResponse.Items
-
-	return response, nil
+func (t *TaskServiceImpl) List(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
+	return t.repo.List(filter, page, limit)
 }
 
 func (t *TaskServiceImpl) Index(taskId int32) (entity.TaskDetailResponseDto, error) {
-	task, err := t.repo.Index(taskId)
-	if err != nil {
-		var appErr *app.AppError
-		if !errors.As(err, &appErr) {
-			log2.Errorf("[Svc.Task.Index] failed to get task, cause: %v", err)
-			return entity.TaskDetailResponseDto{}, app.NewAppError(fiber.StatusInternalServerError, "failed to get task")
-		}
-		return entity.TaskDetailResponseDto{}, appErr
-	}
-	task.LastUpdatedAt = helper.FormatUnixTime(task.LastUpdatedAt)
-	return task, nil
+	return t.repo.Index(taskId)
 }
 
-func (t *TaskServiceImpl) Create(userId int32, task entity.CreateTaskRequestDto) error {
+func (t *TaskServiceImpl) Create(task entity.CreateTaskRequestDto) error {
 	taskEntity := entity.Task{
 		Title:       task.Title,
 		Description: task.Description,
 		Content:     task.Content,
-		Author:      userId,
+		AttachedURL: task.AttachedURL,
 	}
-	taskId, err := t.repo.Create(taskEntity)
-	if err != nil {
-		log2.Errorf("[Svc.Task.Create] failed to create task, cause: %v", err)
-		var appErr *app.AppError
-		if !errors.As(err, &appErr) {
-			return app.NewAppError(fiber.StatusInternalServerError, "failed to create task")
-		}
-		return err
-	}
-	attachments, err := t.uploadFilesToStorageService(taskId, task.Attachments)
-	if err != nil {
-		log2.Errorf("[Svc.Task.Create] failed to upload file, cause: %v", err)
-	}
-	attachmentIds, err := t.storageRepository.InsertAttachments(attachments)
-	if err != nil {
-		log2.Errorf("[Svc.Task.Create] failed to insert attachments, cause: %v", err)
-		return app.NewAppError(fiber.StatusInternalServerError, "failed to insert attachments")
-	}
-	err = t.repo.InsertAttachments(taskId, attachmentIds)
-	if err != nil {
-		log2.Errorf("[Svc.Task.Create] failed to insert attachments, cause: %v", err)
-	}
-	return nil
-}
-
-func (t *TaskServiceImpl) uploadFilesToStorageService(taskId int64, files []*multipart.FileHeader) ([]storageEntity.Attachment, error) {
-
-	for _, attachment := range files {
-		_, err := helper.GetFileType(attachment)
-		if err != nil {
-			return []storageEntity.Attachment{}, app.NewAppError(fiber.StatusBadRequest, "Invalid file type")
-		}
-		if !helper.ValidateFileSize(attachment, 10*1024*1024) {
-			return []storageEntity.Attachment{}, app.NewAppError(400, "file size is too large")
-		}
-	}
-
-	var attachments []storageEntity.Attachment
-	for _, attachment := range files {
-		fileType, _ := helper.GetFileType(attachment)
-		key := fmt.Sprintf("task/%s-task/%d", fileType, taskId)
-		response, err := t.storageService.UploadFile(storageEntity.UploadFileRequestDto{
-			Key:  key,
-			File: attachment,
-		})
-		if err != nil {
-			var appErr *app.AppError
-			if !errors.As(err, &appErr) {
-				log2.Errorf("[Svc.Task.Create] failed to upload file, cause: %v", err)
-				return []storageEntity.Attachment{}, app.NewAppError(fiber.StatusInternalServerError, "failed to upload file")
-			}
-			return []storageEntity.Attachment{}, appErr
-		}
-		attachments = append(attachments, storageEntity.Attachment{
-			Type: fileType,
-			Url:  response.Data.Url,
-		})
-	}
-	return attachments, nil
+	return t.repo.Create(taskEntity)
 }
 
 func (t *TaskServiceImpl) Delete(taskId int32) error {
-	err := t.repo.Delete(taskId)
-	if err != nil {
-		return app.NewAppError(fiber.StatusInternalServerError, "failed to delete task")
-	}
-	attachments, _ := t.repo.ListAttachments(taskId)
-	for _, attachment := range attachments {
-		err := t.storageService.DeleteFile(helper.GetFileKey(attachment.Url))
-		if err != nil {
-			log2.Errorf("[Svc.Task.Delete] failed to delete file, cause: %v", err)
-		}
-	}
-	return nil
+	return t.repo.Delete(taskId)
+
 }

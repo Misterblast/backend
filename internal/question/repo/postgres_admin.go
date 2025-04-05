@@ -15,7 +15,7 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 		JOIN sets s ON q.set_id = s.id
 		JOIN lessons l ON s.lesson_id = l.id
 		JOIN classes c ON s.class_id = c.id
-		WHERE 1=1
+		WHERE 1=1 and deleted_at IS NULL
 	`
 
 	whereClause := ""

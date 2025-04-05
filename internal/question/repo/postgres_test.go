@@ -20,7 +20,7 @@ func TestAddQuestion(t *testing.T) {
 		WithArgs(1, "c4_faktual", "mm", "Sample Question", true, "exp-1", 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	question := questionEntity.SetQuestion{SetID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", IsQuiz: true, Explanation: "exp-1"}
+	question := questionEntity.SetQuestion{SetID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", Explanation: "exp-1"}
 	err = repository.Add(question)
 
 	assert.NoError(t, err)

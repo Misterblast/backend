@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/ghulammuzz/misterblast/internal/task/entity"
 	service "github.com/ghulammuzz/misterblast/internal/task/svc"
@@ -11,7 +10,6 @@ import (
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type TaskHandler struct {
@@ -24,19 +22,23 @@ func NewTaskHandler(s service.TaskService, val *validator.Validate) *TaskHandler
 }
 
 func (h *TaskHandler) Router(r fiber.Router) {
-	r.Get("/tasks", m.R100(), m.JWTProtected(), h.List)
-	r.Get("/tasks/:id", m.R100(), m.JWTProtected(), h.Index)
-	r.Post("/tasks", m.R100(), m.JWTProtected(), h.CreateTask)
-	r.Delete("/tasks/:id", m.R100(), m.JWTProtected(), h.Delete)
+	r.Get("/tasks", m.R100(), h.List)
+	r.Get("/tasks/:id", m.R100(), h.Index)
+	r.Post("/tasks", m.R100(), h.CreateTask)
+	r.Delete("/tasks/:id", m.R100(), h.Delete)
 	r.Post("/submit-task/:id", m.R100(), m.JWTProtected(), h.SubmitTask)
 }
 
 func (h *TaskHandler) List(c *fiber.Ctx) error {
-	var listTaskRequestDto entity.ListTaskRequestDto
-	listTaskRequestDto.Page = int32(c.QueryInt("page", 1))
-	listTaskRequestDto.Search = c.Query("search")
+	filter := map[string]string{}
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
 
-	tasks, err := h.s.List(listTaskRequestDto)
+	if c.Query("search") != "" {
+		filter["search"] = c.Query("search")
+	}
+
+	tasks, err := h.s.List(filter, page, limit)
 	if err != nil {
 		var appErr *app.AppError
 		ok := errors.As(err, &appErr)
@@ -88,22 +90,13 @@ func (h *TaskHandler) CreateTask(c *fiber.Ctx) error {
 	if err := c.BodyParser(&createTaskRequestDto); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
 	}
-	form, err := c.MultipartForm()
-	if err != nil {
-		return response.SendError(c, fiber.StatusBadRequest, "Invalid multipart form", nil)
-	}
-	if files, ok := form.File["attachments"]; ok {
-		createTaskRequestDto.Attachments = files
-	}
 
 	if err := h.val.Struct(createTaskRequestDto); err != nil {
 		validationErrors := app.ValidationErrorResponse(err)
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
 	}
 
-	claims := c.Locals("claims").(jwt.MapClaims)
-
-	if err := h.s.Create(int32(claims["user_id"].(float64)), createTaskRequestDto); err != nil {
+	if err := h.s.Create(createTaskRequestDto); err != nil {
 		var appErr *app.AppError
 		ok := errors.As(err, &appErr)
 		if !ok {
@@ -111,7 +104,7 @@ func (h *TaskHandler) CreateTask(c *fiber.Ctx) error {
 		}
 		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
-	return response.SendResponse(c, http.StatusCreated, "Task added successfully", nil)
+	return response.SendSuccess(c, "Task added successfully", nil)
 }
 
 func (h *TaskHandler) SubmitTask(c *fiber.Ctx) error {
@@ -123,15 +116,6 @@ func (h *TaskHandler) SubmitTask(c *fiber.Ctx) error {
 	var submitTaskRequestDto entity.SubmitTaskRequestDto
 	if err := c.BodyParser(&submitTaskRequestDto); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "Invalid Body", err.Error())
-	}
-
-	form, err := c.MultipartForm()
-	if err != nil {
-		return response.SendError(c, fiber.StatusBadRequest, "Invalid multipart form", nil)
-	}
-
-	if files, ok := form.File["attachments"]; ok {
-		submitTaskRequestDto.Attachments = files
 	}
 
 	return response.SendSuccess(c, "tasks retrieved successfully", "")
