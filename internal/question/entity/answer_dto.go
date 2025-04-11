@@ -3,14 +3,14 @@ package entity
 type SetAnswer struct {
 	ID         int32   `json:"id"`
 	QuestionID int32   `json:"question_id" validate:"required"`
-	Code       string  `json:"code" validate:"required,oneof=a b c d esay"`
+	Code       string  `json:"code" validate:"required,oneof=a b c d essay"`
 	Content    string  `json:"content" validate:"required"`
 	ImgURL     *string `json:"img_url,omitempty"`
 	IsAnswer   bool    `json:"is_answer"`
 }
 type EditAnswer struct {
 	QuestionID int32   `json:"question_id" validate:"required"`
-	Code       string  `json:"code" validate:"required,oneof=a b c d esay"`
+	Code       string  `json:"code" validate:"required,oneof=a b c d essay"`
 	Content    string  `json:"content" validate:"required"`
 	ImgURL     *string `json:"img_url,omitempty"`
 	IsAnswer   bool    `json:"is_answer"`

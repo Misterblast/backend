@@ -15,7 +15,7 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 		JOIN sets s ON q.set_id = s.id
 		JOIN lessons l ON s.lesson_id = l.id
 		JOIN classes c ON s.class_id = c.id
-		WHERE 1=1 and deleted_at IS NULL
+		WHERE 1=1 AND q.deleted_at IS NULL
 	`
 
 	whereClause := ""
@@ -40,6 +40,16 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 	if set, exists := filter["set"]; exists {
 		whereClause += fmt.Sprintf(" AND s.name = $%d", argCounter)
 		args = append(args, set)
+		argCounter++
+	}
+	if lang, exists := filter["lang"]; exists {
+		whereClause += fmt.Sprintf(" AND q.lang = $%d", argCounter)
+		args = append(args, lang)
+		argCounter++
+	}
+	if search, exists := filter["search"]; exists {
+		whereClause += fmt.Sprintf(" AND q.content ILIKE $%d", argCounter)
+		args = append(args, "%"+search+"%")
 		argCounter++
 	}
 

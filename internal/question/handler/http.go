@@ -32,6 +32,7 @@ func (h *QuestionHandler) Router(r fiber.Router) {
 	r.Delete("/answer/:id", m.R100(), h.DeleteAnswerHandler)
 	r.Put("/answer/:id", m.R100(), h.EditAnswerHandler)
 	r.Post("/quiz-answer", m.R100(), h.AddQuizAnswerHandler)
+	r.Post("/question-answer", m.R100(), h.AddQuizAnswerHandler)
 
 	// quiz
 	r.Get("/quiz", m.R100(), h.ListQuizHandler)
@@ -201,9 +202,12 @@ func (h *QuestionHandler) ListQuestionAdminHandler(c *fiber.Ctx) error {
 	if c.Query("set") != "" {
 		filter["set"] = c.Query("set")
 	}
-	// if c.Query("search") != "" {
-	// 	filter["search"] = c.Query("search")
-	// }
+	if c.Query("search") != "" {
+		filter["search"] = c.Query("search")
+	}
+	if c.Query("lang") != "" {
+		filter["lang"] = c.Query("lang")
+	}
 
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)

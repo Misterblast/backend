@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
@@ -60,16 +61,47 @@ func (r *questionRepository) Add(question questionEntity.SetQuestion, lang strin
 }
 
 func (r *questionRepository) Detail(id int32) (questionEntity.DetailQuestionExample, error) {
-	query := `SELECT id, number, type, format, content, explanation, set_id FROM questions WHERE id = $1`
 	var question questionEntity.DetailQuestionExample
-	err := r.db.QueryRow(query, id).Scan(&question.ID, &question.Number, &question.Type, &question.Format, &question.Content, &question.Explanation, &question.SetID)
+	var answersJSON []byte
+
+	query := `
+	SELECT 
+		q.id, q.number, q.type, q.format, q.content, q.explanation, q.set_id,
+		COALESCE(json_agg(json_build_object(
+			'id', a.id,
+			'code', a.code,
+			'content', a.content,
+			'img_url', a.img_url
+		)) FILTER (WHERE a.id IS NOT NULL), '[]') AS answers
+	FROM questions q
+	LEFT JOIN answers a ON q.id = a.question_id
+	WHERE q.id = $1
+	GROUP BY q.id
+	`
+
+	err := r.db.QueryRow(query, id).Scan(
+		&question.ID,
+		&question.Number,
+		&question.Type,
+		&question.Format,
+		&question.Content,
+		&question.Explanation,
+		&question.SetID,
+		&answersJSON,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return question, app.NewAppError(404, "question not found")
 		}
-		log.Error("[Repo][DetailQuestion] Error fetching question detail:", err)
+		log.Error("[Repo][DetailQuestion] Error scanning:", err)
 		return question, app.NewAppError(500, "failed to fetch question detail")
 	}
+
+	if err := json.Unmarshal(answersJSON, &question.Answers); err != nil {
+		log.Error("[Repo][DetailQuestion] Error unmarshalling answers:", err)
+		return question, app.NewAppError(500, "failed to parse answers")
+	}
+
 	return question, nil
 }
 
