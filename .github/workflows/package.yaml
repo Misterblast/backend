@@ -1,8 +1,8 @@
-name: Relaease ghcr.io
+name: Release ghcr.io
 
 on:
   workflow_call:
-    
+
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -10,6 +10,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Check commit message
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Last commit message: $COMMIT_MSG"
+          if [[ "$COMMIT_MSG" != *"--publish"* ]]; then
+            echo "Commit message does not contain --publish. Skipping job."
+            exit 1
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v2
