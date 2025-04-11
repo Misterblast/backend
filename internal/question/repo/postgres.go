@@ -12,7 +12,7 @@ import (
 
 type QuestionRepository interface {
 	// Questions
-	Add(question questionEntity.SetQuestion) error
+	Add(question questionEntity.SetQuestion, lang string) error
 	List(filter map[string]string) ([]questionEntity.ListQuestionExample, error)
 	Delete(id int32) error
 	Detail(id int32) (questionEntity.DetailQuestionExample, error)
@@ -37,10 +37,10 @@ func NewQuestionRepository(db *sql.DB) QuestionRepository {
 	return &questionRepository{db: db}
 }
 
-func (r *questionRepository) Add(question questionEntity.SetQuestion) error {
+func (r *questionRepository) Add(question questionEntity.SetQuestion, lang string) error {
 	query := `
-		INSERT INTO questions (number, type, format, content, is_quiz, explanation, set_id)
-		VALUES ($1, $2, $3, $4, (SELECT is_quiz FROM sets WHERE id = $5), $6, $5)
+		INSERT INTO questions (number, type, format, content, is_quiz, explanation, set_id, lang)
+		VALUES ($1, $2, $3, $4, (SELECT is_quiz FROM sets WHERE id = $5), $6, $5, $7)
 	`
 	_, err := r.db.Exec(query,
 		question.Number,
@@ -49,6 +49,7 @@ func (r *questionRepository) Add(question questionEntity.SetQuestion) error {
 		question.Content,
 		question.SetID,
 		question.Explanation,
+		lang,
 	)
 
 	if err != nil {
@@ -109,16 +110,20 @@ func (r *questionRepository) List(filter map[string]string) ([]questionEntity.Li
 }
 
 func (r *questionRepository) Delete(id int32) error {
-	query := `UPDATE questions SET deleted_at = EXTRACT(EPOCH FROM NOW()) WHERE id = $1`
+	const query = `
+		UPDATE questions
+		SET deleted_at = EXTRACT(EPOCH FROM NOW())
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+
 	res, err := r.db.Exec(query, id)
 	if err != nil {
-		log.Error("[Repo][DeleteQuestion] Error deleting question:", err)
+		log.Error("[Repo][DeleteQuestion] Failed to soft delete question with id %d: %v", id, err)
 		return app.NewAppError(500, "failed to delete question")
 	}
 
-	rowsAffected, _ := res.RowsAffected()
-	if rowsAffected == 0 {
-		return app.NewAppError(404, "question not found")
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return app.NewAppError(404, "question not found or already deleted")
 	}
 
 	return nil

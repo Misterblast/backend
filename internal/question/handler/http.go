@@ -50,7 +50,13 @@ func (h *QuestionHandler) AddQuestionHandler(c *fiber.Ctx) error {
 	if err := h.val.Struct(question); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", err.Error())
 	}
-	if err := h.questionService.AddQuestion(question); err != nil {
+
+	lang := c.Query("lang")
+	if lang == "" {
+		return response.SendError(c, fiber.StatusBadRequest, "language (lang) is required", nil)
+	}
+
+	if err := h.questionService.AddQuestion(question, lang); err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
 			appErr = app.ErrInternal

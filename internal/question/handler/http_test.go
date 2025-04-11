@@ -21,8 +21,8 @@ type MockQuestionService struct {
 	mock.Mock
 }
 
-func (m *MockQuestionService) AddQuestion(question questionEntity.SetQuestion) error {
-	args := m.Called(question)
+func (m *MockQuestionService) AddQuestion(question questionEntity.SetQuestion, lang string) error {
+	args := m.Called(question, lang)
 	return args.Error(0)
 }
 
@@ -78,12 +78,22 @@ func TestAddQuestionHandler(t *testing.T) {
 	handler := handler.NewQuestionHandler(mockService, validate)
 	app.Post("/question", handler.AddQuestionHandler)
 
-	question := questionEntity.SetQuestion{SetID: 9, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", Explanation: "exp-1"}
+	// Lang akan dimasukkan via query string
+	lang := "id"
+
+	question := questionEntity.SetQuestion{
+		SetID:       9,
+		Number:      1,
+		Type:        "c4_faktual",
+		Format:      "mm",
+		Content:     "Sample Question",
+		Explanation: "exp-1",
+	}
 	questionJSON, _ := json.Marshal(question)
 
-	mockService.On("AddQuestion", question).Return(nil)
+	mockService.On("AddQuestion", question, lang).Return(nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/question", bytes.NewReader(questionJSON))
+	req := httptest.NewRequest(http.MethodPost, "/question?lang="+lang, bytes.NewReader(questionJSON))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, _ := app.Test(req)

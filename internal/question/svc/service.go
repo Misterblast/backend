@@ -9,7 +9,7 @@ import (
 
 type QuestionService interface {
 	// Questions
-	AddQuestion(question questionEntity.SetQuestion) error
+	AddQuestion(question questionEntity.SetQuestion, lang string) error
 	ListQuestions(filter map[string]string) ([]questionEntity.ListQuestionExample, error)
 	ListQuizQuestions(filter map[string]string) ([]questionEntity.ListQuestionQuiz, error)
 	DeleteQuestion(id int32) error
@@ -40,7 +40,7 @@ func (s *questionService) EditQuizAnswer(id int32, question questionEntity.EditA
 	return s.repo.EditAnswer(id, question)
 }
 
-func (s *questionService) AddQuestion(q questionEntity.SetQuestion) error {
+func (s *questionService) AddQuestion(q questionEntity.SetQuestion, lang string) error {
 	exists, err := s.repo.Exists(q.SetID, q.Number)
 	if err != nil {
 		return err
@@ -48,8 +48,7 @@ func (s *questionService) AddQuestion(q questionEntity.SetQuestion) error {
 	if exists {
 		return app.NewAppError(409, "question number already exists in this set")
 	}
-
-	return s.repo.Add(q)
+	return s.repo.Add(q, lang)
 }
 
 func (s *questionService) ListQuestions(filter map[string]string) ([]questionEntity.ListQuestionExample, error) {

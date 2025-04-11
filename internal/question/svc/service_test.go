@@ -20,8 +20,8 @@ func (m *MockQuestionRepo) AddQuizAnswer(question questionEntity.SetAnswer) erro
 	return args.Error(0)
 }
 
-func (m *MockQuestionRepo) Add(q questionEntity.SetQuestion) error {
-	args := m.Called(q)
+func (m *MockQuestionRepo) Add(q questionEntity.SetQuestion, lang string) error {
+	args := m.Called(q, lang)
 	return args.Error(0)
 }
 
@@ -121,15 +121,20 @@ func TestAddQuestionService(t *testing.T) {
 	mockRepo := new(MockQuestionRepo)
 	service := svc.NewQuestionService(mockRepo)
 
-	question := questionEntity.SetQuestion{SetID: 1, Number: 1, Content: "New Question"}
+	question := questionEntity.SetQuestion{
+		SetID:   1,
+		Number:  1,
+		Content: "New Question",
+	}
 
 	mockRepo.On("Exists", question.SetID, question.Number).Return(false, nil)
-	mockRepo.On("Add", question).Return(nil)
+	mockRepo.On("Add", question, "en").Return(nil)
 
-	err := service.AddQuestion(question)
+	err := service.AddQuestion(question, "en")
 	assert.NoError(t, err)
+
 	mockRepo.AssertCalled(t, "Exists", question.SetID, question.Number)
-	mockRepo.AssertCalled(t, "Add", question)
+	mockRepo.AssertCalled(t, "Add", question, "en")
 }
 
 func TestDeleteQuestionService(t *testing.T) {

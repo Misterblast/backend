@@ -1,6 +1,7 @@
 package repo_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -17,16 +18,23 @@ func TestAddQuestion(t *testing.T) {
 	repository := repo.NewQuestionRepository(db)
 
 	mock.ExpectExec(`INSERT INTO questions`).
-		WithArgs(1, "c4_faktual", "mm", "Sample Question", true, "exp-1", 1).
+		WithArgs(1, "c4_faktual", "mm", "Sample Question", 1, "exp-1", "id").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	question := questionEntity.SetQuestion{SetID: 1, Number: 1, Type: "c4_faktual", Format: "mm", Content: "Sample Question", Explanation: "exp-1"}
-	err = repository.Add(question)
+	question := questionEntity.SetQuestion{
+		SetID:       1,
+		Number:      1,
+		Type:        "c4_faktual",
+		Format:      "mm",
+		Content:     "Sample Question",
+		Explanation: "exp-1",
+	}
+
+	err = repository.Add(question, "id")
 
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
-
 func TestDeleteQuestion(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
@@ -34,14 +42,39 @@ func TestDeleteQuestion(t *testing.T) {
 
 	repository := repo.NewQuestionRepository(db)
 
-	mock.ExpectExec(`DELETE FROM questions WHERE id =`).
-		WithArgs(1).
-		WillReturnResult(sqlmock.NewResult(0, 1))
+	const query = `UPDATE questions SET deleted_at = EXTRACT\(EPOCH FROM NOW\(\)\) WHERE id = \$1 AND deleted_at IS NULL`
 
-	err = repository.Delete(1)
+	t.Run("Success delete", func(t *testing.T) {
+		mock.ExpectExec(query).
+			WithArgs(1).
+			WillReturnResult(sqlmock.NewResult(0, 1))
 
-	assert.NoError(t, err)
-	assert.NoError(t, mock.ExpectationsWereMet())
+		err := repository.Delete(1)
+		assert.NoError(t, err)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("No rows affected", func(t *testing.T) {
+		mock.ExpectExec(query).
+			WithArgs(2).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		err := repository.Delete(2)
+		assert.Error(t, err)
+		assert.Equal(t, "question not found or already deleted", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Database error", func(t *testing.T) {
+		mock.ExpectExec(query).
+			WithArgs(3).
+			WillReturnError(errors.New("db error"))
+
+		err := repository.Delete(3)
+		assert.Error(t, err)
+		assert.Equal(t, "failed to delete question", err.Error())
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestExistsQuestion(t *testing.T) {
