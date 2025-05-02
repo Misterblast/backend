@@ -11,7 +11,7 @@ import (
 
 type EmailService interface {
 	SendOTP(email string) error
-	SendDeeplink(email string) error
+	SendDeeplink(email string) (string, error)
 	ValidateOTP(adminID int32, otp string) error
 }
 
@@ -88,30 +88,30 @@ func (s *emailService) ValidateOTP(adminID int32, otp string) error {
 	return nil
 }
 
-func (s *emailService) SendDeeplink(email string) error {
+func (s *emailService) SendDeeplink(email string) (string, error) {
 
 	userID, err := s.userRepo.GetIDByEmail(email)
 	if err != nil {
 		log.Error("[Svc][s.userRepo.GetIDByEmail] Error Exec: ", err)
-		return err
+		return "", err
 	}
 	tokenString, err := s.userRepo.GenerateToken()
 	if err != nil {
 		log.Error("[Svc][s.userRepo.GenerateToken] Error Exec: ", err)
-		return err
+		return "", err
 	}
 
 	expAt := time.Now().Add(120 * time.Second).Unix()
 
 	if err := s.userRepo.SetDeeplink(userID, tokenString, expAt); err != nil {
 		log.Error("[Svc][s.userRepo.SetDeeplink] Error Exec: ", err)
-		return err
+		return "", err
 	}
 
 	if err := s.otp.SendDeeplinkEmailSMTP(email, tokenString); err != nil {
 		log.Error("[Svc][s.otp.SendDeeplinkEmailSMTP] Error Exec: ", err)
-		return err
+		return "", err
 	}
 
-	return nil
+	return tokenString, nil
 }

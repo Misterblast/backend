@@ -89,14 +89,13 @@ func (h *EmailHandler) SendDeeplinkForgotPasswordHandler(c *fiber.Ctx) error {
 		log.Error("Validation failed: %v", validationErrors)
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
 	}
-
-	if err := h.emailService.SendDeeplink(SendDeeplink.Email); err != nil {
+	token, err := h.emailService.SendDeeplink(SendDeeplink.Email)
+	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
 			appErr = app.ErrInternal
 		}
 		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
-
-	return response.SendSuccess(c, "Deeplink successfully sent to your email", nil)
+	return response.SendSuccess(c, "Deeplink successfully sent to your email", token)
 }
