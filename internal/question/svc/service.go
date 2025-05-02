@@ -1,6 +1,8 @@
 package svc
 
 import (
+	"context"
+
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/internal/question/repo"
 	"github.com/ghulammuzz/misterblast/pkg/app"
@@ -10,10 +12,10 @@ import (
 type QuestionService interface {
 	// Questions
 	AddQuestion(question questionEntity.SetQuestion, lang string) error
-	ListQuestions(filter map[string]string) ([]questionEntity.ListQuestionExample, error)
+	ListQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error)
 	ListQuizQuestions(filter map[string]string) ([]questionEntity.ListQuestionQuiz, error)
 	DeleteQuestion(id int32) error
-	DetailQuestion(id int32) (questionEntity.DetailQuestionExample, error)
+	DetailQuestion(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error)
 	EditQuestion(id int32, question questionEntity.EditQuestion) error
 
 	// Answer
@@ -51,8 +53,8 @@ func (s *questionService) AddQuestion(q questionEntity.SetQuestion, lang string)
 	return s.repo.Add(q, lang)
 }
 
-func (s *questionService) ListQuestions(filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
-	return s.repo.List(filter)
+func (s *questionService) ListQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
+	return s.repo.List(ctx, filter)
 }
 
 func (s *questionService) DeleteQuestion(id int32) error {
@@ -83,6 +85,6 @@ func (s *questionService) DeleteAnswer(id int32) error {
 	return s.repo.DeleteAnswer(id)
 }
 
-func (s *questionService) DetailQuestion(id int32) (questionEntity.DetailQuestionExample, error) {
-	return s.repo.Detail(id)
+func (s *questionService) DetailQuestion(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error) {
+	return s.repo.Detail(ctx, id)
 }

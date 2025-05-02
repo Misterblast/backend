@@ -12,7 +12,8 @@ import (
 
 	mlog "log/slog"
 
-	config "github.com/ghulammuzz/misterblast/config/postgres"
+	pg "github.com/ghulammuzz/misterblast/config/postgres"
+	rds "github.com/ghulammuzz/misterblast/config/redis"
 	"github.com/ghulammuzz/misterblast/config/validator"
 	class "github.com/ghulammuzz/misterblast/internal/class/di"
 	email "github.com/ghulammuzz/misterblast/internal/email/di"
@@ -52,12 +53,18 @@ func init() {
 }
 
 func main() {
-	db, err := config.InitPostgres()
+	db, err := pg.InitPostgres()
 	if err != nil {
 		log.Error("Failed to initialize database: %v", err)
 		os.Exit(1)
 	}
 	defer db.Close()
+	redis, err := rds.InitRedis()
+	if err != nil {
+		log.Error("Failed to initialize redis: %v", err)
+		os.Exit(1)
+	}
+	defer redis.Close()
 
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
@@ -96,7 +103,7 @@ func main() {
 	class.InitializedClassService(db).Router(api)
 	lesson.InitializedLessonService(db, validator.Validate).Router(api)
 	set.InitializedSetService(db, validator.Validate).Router(api)
-	question.InitializedQuestionService(db, validator.Validate).Router(api)
+	question.InitializedQuestionService(db, redis, validator.Validate).Router(api)
 	user.InitializedUserService(db, validator.Validate).Router(api)
 	email.InitializedEmailService(db, validator.Validate).Router(api)
 	quiz.InitializedQuizService(db, validator.Validate).Router(api)

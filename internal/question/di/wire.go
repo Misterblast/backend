@@ -8,9 +8,10 @@ import (
 	questionSvc "github.com/ghulammuzz/misterblast/internal/question/svc"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/wire"
+	"github.com/redis/go-redis/v9"
 )
 
-func InitializedQuestionServiceFake(sb *sql.DB, val *validator.Validate) *questionHandler.QuestionHandler {
+func InitializedQuestionServiceFake(sb *sql.DB, redis *redis.Client, val *validator.Validate) *questionHandler.QuestionHandler {
 	wire.Build(
 		questionHandler.NewQuestionHandler,
 		questionSvc.NewQuestionService,

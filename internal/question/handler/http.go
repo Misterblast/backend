@@ -74,7 +74,7 @@ func (h *QuestionHandler) ListQuestionsHandler(c *fiber.Ctx) error {
 		filter["set_id"] = setID
 	}
 
-	questions, err := h.questionService.ListQuestions(filter)
+	questions, err := h.questionService.ListQuestions(c.Context(), filter)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
@@ -92,7 +92,7 @@ func (h *QuestionHandler) DetailQuestionsHandler(c *fiber.Ctx) error {
 		return response.SendError(c, fiber.StatusBadRequest, "invalid question ID", nil)
 	}
 
-	question, err := h.questionService.DetailQuestion(int32(id))
+	question, err := h.questionService.DetailQuestion(c.Context(), int32(id))
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

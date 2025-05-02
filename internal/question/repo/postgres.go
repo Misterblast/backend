@@ -1,22 +1,25 @@
 package repo
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 
+	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
 	"github.com/ghulammuzz/misterblast/pkg/response"
+	"github.com/redis/go-redis/v9"
 )
 
 type QuestionRepository interface {
 	// Questions
 	Add(question questionEntity.SetQuestion, lang string) error
-	List(filter map[string]string) ([]questionEntity.ListQuestionExample, error)
+	List(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error)
 	Delete(id int32) error
-	Detail(id int32) (questionEntity.DetailQuestionExample, error)
+	Detail(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error)
 	Exists(setID int32, number int) (bool, error)
 	Edit(id int32, question questionEntity.EditQuestion) error
 
@@ -31,11 +34,12 @@ type QuestionRepository interface {
 }
 
 type questionRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	redis *redis.Client
 }
 
-func NewQuestionRepository(db *sql.DB) QuestionRepository {
-	return &questionRepository{db: db}
+func NewQuestionRepository(db *sql.DB, redis *redis.Client) QuestionRepository {
+	return &questionRepository{db, redis}
 }
 
 func (r *questionRepository) Add(question questionEntity.SetQuestion, lang string) error {
@@ -60,10 +64,18 @@ func (r *questionRepository) Add(question questionEntity.SetQuestion, lang strin
 	return nil
 }
 
-func (r *questionRepository) Detail(id int32) (questionEntity.DetailQuestionExample, error) {
+func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error) {
 	var question questionEntity.DetailQuestionExample
-	var answersJSON []byte
+	redisKey := fmt.Sprintf("question:detail:%d", id)
 
+	cached, err := cache.Get(ctx, redisKey, r.redis)
+	if err == nil && cached != "" {
+		if err := json.Unmarshal([]byte(cached), &question); err == nil {
+			return question, nil
+		}
+	}
+
+	var answersJSON []byte
 	query := `
 	SELECT 
 		q.id, q.number, q.type, q.format, q.content, q.explanation, q.set_id,
@@ -79,7 +91,7 @@ func (r *questionRepository) Detail(id int32) (questionEntity.DetailQuestionExam
 	GROUP BY q.id
 	`
 
-	err := r.db.QueryRow(query, id).Scan(
+	err = r.db.QueryRow(query, id).Scan(
 		&question.ID,
 		&question.Number,
 		&question.Type,
@@ -102,12 +114,27 @@ func (r *questionRepository) Detail(id int32) (questionEntity.DetailQuestionExam
 		return question, app.NewAppError(500, "failed to parse answers")
 	}
 
+	dataJSON, err := json.Marshal(question)
+	if err == nil {
+		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+		// _ = r.redis.Set(ctx, redisKey, dataJSON, 10*time.Minute).Err()
+	}
+
 	return question, nil
 }
 
-func (r *questionRepository) List(filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
+func (r *questionRepository) List(ctx context.Context,  filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
+	var questions []questionEntity.ListQuestionExample
+	redisKey := fmt.Sprintf("question:list:%s", filter["set_id"])
+
+	cached, err := cache.Get(ctx, redisKey, r.redis)
+	if err == nil && cached != "" {
+		if err := json.Unmarshal([]byte(cached), &questions); err == nil {
+			return questions, nil
+		}
+	}
 	query := `SELECT id, number, type, format, content, explanation, set_id FROM questions WHERE 1=1 and deleted_at IS NULL`
-	args := []interface{}{}
+	args := []any{}
 	argCounter := 1
 
 	if setID, ok := filter["set_id"]; ok {
@@ -123,7 +150,6 @@ func (r *questionRepository) List(filter map[string]string) ([]questionEntity.Li
 	}
 	defer rows.Close()
 
-	var questions []questionEntity.ListQuestionExample
 	for rows.Next() {
 		var question questionEntity.ListQuestionExample
 		if err := rows.Scan(&question.ID, &question.Number, &question.Type, &question.Format, &question.Content, &question.Explanation, &question.SetID); err != nil {
@@ -136,6 +162,11 @@ func (r *questionRepository) List(filter map[string]string) ([]questionEntity.Li
 	if err := rows.Err(); err != nil {
 		log.Error("[Repo][ListQuestions] Error Iterating Rows: ", err)
 		return nil, app.NewAppError(500, "error iterating rows")
+	}
+	dataJSON, err := json.Marshal(questions)
+	if err == nil {
+		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+		// _ = r.redis.Set(ctx, redisKey, dataJSON, 10*time.Minute).Err()
 	}
 
 	return questions, nil

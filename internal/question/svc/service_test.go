@@ -1,6 +1,7 @@
 package svc_test
 
 import (
+	"context"
 	"testing"
 
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
@@ -30,12 +31,12 @@ func (m *MockQuestionRepo) Exists(setID int32, number int) (bool, error) {
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockQuestionRepo) List(filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
-	args := m.Called(filter)
+func (m *MockQuestionRepo) List(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
+	args := m.Called(ctx, filter)
 	return args.Get(0).([]questionEntity.ListQuestionExample), args.Error(1)
 }
 
-func (m *MockQuestionRepo) Detail(id int32) (questionEntity.DetailQuestionExample, error) {
+func (m *MockQuestionRepo) Detail(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error) {
 	args := m.Called()
 	return args.Get(0).(questionEntity.DetailQuestionExample), args.Error(1)
 }
@@ -112,7 +113,7 @@ func TestDetailQuestionService(t *testing.T) {
 
 	mockRepo.On("Detail", mock.Anything).Return(mockData, nil)
 
-	questions, err := service.DetailQuestion(1)
+	questions, err := service.DetailQuestion(context.Background(), 1)
 	assert.NoError(t, err)
 	assert.Equal(t, "Question 1aaa", questions.Content)
 }

@@ -15,7 +15,7 @@ func TestAddQuestion(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewQuestionRepository(db)
+	repository := repo.NewQuestionRepository(db, nil)
 
 	mock.ExpectExec(`INSERT INTO questions`).
 		WithArgs(1, "c4_faktual", "mm", "Sample Question", 1, "exp-1", "id").
@@ -40,7 +40,7 @@ func TestDeleteQuestion(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewQuestionRepository(db)
+	repository := repo.NewQuestionRepository(db, nil)
 
 	const query = `UPDATE questions SET deleted_at = EXTRACT\(EPOCH FROM NOW\(\)\) WHERE id = \$1 AND deleted_at IS NULL`
 
@@ -82,7 +82,7 @@ func TestExistsQuestion(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewQuestionRepository(db)
+	repository := repo.NewQuestionRepository(db, nil)
 
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM questions WHERE set_id =`).
 		WithArgs(1, 1).
@@ -100,7 +100,7 @@ func TestListAdmin(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewQuestionRepository(db)
+	repository := repo.NewQuestionRepository(db, nil)
 
 	// Mock total count query
 	mock.ExpectQuery(`SELECT COUNT\(\*\) FROM questions`).
@@ -134,7 +134,7 @@ func TestEditQuestion(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewQuestionRepository(db)
+	repository := repo.NewQuestionRepository(db, nil)
 
 	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c4_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false, Explanation: "exp-1"}
 

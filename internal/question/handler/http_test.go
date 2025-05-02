@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -31,8 +32,8 @@ func (m *MockQuestionService) EditQuestion(id int32, question questionEntity.Edi
 	return args.Error(0)
 }
 
-func (m *MockQuestionService) ListQuestions(filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
-	args := m.Called(filter)
+func (m *MockQuestionService) ListQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
+	args := m.Called(ctx, filter)
 	return args.Get(0).([]questionEntity.ListQuestionExample), args.Error(1)
 }
 
@@ -61,8 +62,8 @@ func (m *MockQuestionService) ListAdmin(filter map[string]string, page, limit in
 	return args.Get(0).(*response.PaginateResponse), args.Error(1)
 }
 
-func (m *MockQuestionService) DetailQuestion(id int32) (questionEntity.DetailQuestionExample, error) {
-	args := m.Called(id)
+func (m *MockQuestionService) DetailQuestion(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error) {
+	args := m.Called(ctx, id)
 	return args.Get(0).(questionEntity.DetailQuestionExample), args.Error(1)
 }
 
@@ -128,7 +129,7 @@ func TestListQuestionsHandler(t *testing.T) {
 	handler := handler.NewQuestionHandler(mockService, validate)
 	app.Get("/question", handler.ListQuestionsHandler)
 
-	mockService.On("ListQuestions", mock.Anything).Return([]questionEntity.ListQuestionExample{}, nil)
+	mockService.On("ListQuestions", mock.Anything, mock.Anything).Return([]questionEntity.ListQuestionExample{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/question", nil)
 	resp, _ := app.Test(req)
@@ -144,7 +145,7 @@ func TestDetailQuestionsHandler(t *testing.T) {
 	handler := handler.NewQuestionHandler(mockService, validate)
 	app.Get("/question/:id", handler.DetailQuestionsHandler)
 
-	mockService.On("DetailQuestion", mock.Anything).Return(questionEntity.DetailQuestionExample{}, nil)
+	mockService.On("DetailQuestion", mock.Anything, mock.Anything).Return(questionEntity.DetailQuestionExample{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/question/9", nil)
 	resp, _ := app.Test(req)
