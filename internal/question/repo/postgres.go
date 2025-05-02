@@ -118,7 +118,7 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 
 	dataJSON, err := json.Marshal(question)
 	if err == nil {
-		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpFast)
 		// _ = r.redis.Set(ctx, redisKey, dataJSON, 10*time.Minute).Err()
 	}
 
@@ -128,7 +128,7 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 func (r *questionRepository) List(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
 	var questions []questionEntity.ListQuestionExample
 	redisKey := fmt.Sprintf("question:list:%s", filter["set_id"])
-	
+
 	if r.redis != nil {
 		cached, err := cache.Get(ctx, redisKey, r.redis)
 		if err == nil && cached != "" {
@@ -170,7 +170,7 @@ func (r *questionRepository) List(ctx context.Context, filter map[string]string)
 
 	if r.redis != nil {
 		if dataJSON, err := json.Marshal(questions); err == nil {
-			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
 		}
 	}
 

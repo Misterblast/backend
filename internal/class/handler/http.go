@@ -59,7 +59,7 @@ func (h *ClassHandler) DeleteClassHandler(c *fiber.Ctx) error {
 }
 
 func (h *ClassHandler) ListClassesHandler(c *fiber.Ctx) error {
-	classes, err := h.classService.ListClasses()
+	classes, err := h.classService.ListClasses(c.Context())
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

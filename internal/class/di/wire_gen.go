@@ -11,12 +11,13 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/class/handler"
 	"github.com/ghulammuzz/misterblast/internal/class/repo"
 	"github.com/ghulammuzz/misterblast/internal/class/svc"
+	"github.com/redis/go-redis/v9"
 )
 
 // Injectors from wire.go:
 
-func InitializedClassService(sb *sql.DB) *handler.ClassHandler {
-	classRepository := repo.NewClassRepository(sb)
+func InitializedClassService(sb *sql.DB, redis2 *redis.Client) *handler.ClassHandler {
+	classRepository := repo.NewClassRepository(sb, redis2)
 	classService := svc.NewClassService(classRepository)
 	classHandler := handler.NewClassHandler(classService)
 	return classHandler

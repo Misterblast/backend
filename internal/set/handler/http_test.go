@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
@@ -31,8 +32,8 @@ func (m *MockSetService) DeleteSet(id int32) error {
 	return args.Error(0)
 }
 
-func (m *MockSetService) ListSets(filter map[string]string) ([]entity.ListSet, error) {
-	args := m.Called(filter)
+func (m *MockSetService) ListSets(ctx context.Context, filter map[string]string) ([]entity.ListSet, error) {
+	args := m.Called(ctx, filter)
 	return args.Get(0).([]entity.ListSet), args.Error(1)
 }
 
@@ -85,7 +86,7 @@ func TestListSetsHandler(t *testing.T) {
 		{ID: 1, Name: "Set A", Lesson: "Math", Class: "Class 1"},
 		{ID: 2, Name: "Set B", Lesson: "Science", Class: "Class 2"},
 	}
-	mockService.On("ListSets", mock.Anything).Return(mockSets, nil)
+	mockService.On("ListSets", mock.Anything, mock.Anything).Return(mockSets, nil)
 
 	req := httptest.NewRequest("GET", "/set", nil)
 	resp, _ := app.Test(req)
@@ -102,7 +103,7 @@ func TestListSetsHandler_Error(t *testing.T) {
 
 	app.Get("/set", h.ListSetsHandler)
 
-	mockService.On("ListSets", mock.Anything).Return([]entity.ListSet{}, errors.New("database error"))
+	mockService.On("ListSets", mock.Anything, mock.Anything).Return([]entity.ListSet{}, errors.New("database error"))
 
 	req := httptest.NewRequest("GET", "/set", nil)
 	resp, _ := app.Test(req)

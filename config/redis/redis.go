@@ -10,6 +10,23 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const (
+	LongEXP     = 24 * time.Hour
+	StandardEXP = 10 * time.Minute
+	FastEXP     = 5 * time.Minute
+	BlazingEXP  = 3 * time.Minute
+	InstantEXP  = 1 * time.Minute
+)
+
+type ExpirationType string
+
+const (
+	ExpFast     ExpirationType = "fast"
+	ExpStandard ExpirationType = "standard"
+	ExpLong     ExpirationType = "long"
+	ExpBlazing  ExpirationType = "blazing"
+)
+
 func InitRedis() (*redis.Client, error) {
 	addr := os.Getenv("REDIS_ADDRESS")
 	password := os.Getenv("REDIS_PASSWORD")
@@ -37,14 +54,28 @@ func InitRedis() (*redis.Client, error) {
 func Get(ctx context.Context, redisKey string, rdb *redis.Client) (string, error) {
 	val, err := rdb.Get(ctx, redisKey).Result()
 	if err != nil {
-		// log.Error("Failed to get value from Redis: %v", err)
 		return "", fmt.Errorf("failed to get value from redis: %w", err)
 	}
 	return val, nil
 }
 
-func Set(ctx context.Context, redisKey string, value string, rdb *redis.Client) error {
-	err := rdb.Set(ctx, redisKey, value, 10*time.Minute).Err()
+func Set(ctx context.Context, redisKey string, value string, rdb *redis.Client, expType ExpirationType) error {
+	var ttl time.Duration
+
+	switch expType {
+	case ExpFast:
+		ttl = FastEXP
+	case ExpStandard:
+		ttl = StandardEXP
+	case ExpLong:
+		ttl = LongEXP
+	case ExpBlazing:
+		ttl = BlazingEXP
+	default:
+		ttl = StandardEXP // fallback default
+	}
+
+	err := rdb.Set(ctx, redisKey, value, ttl).Err()
 	if err != nil {
 		log.Error("Failed to set value in Redis: %v", err)
 		return fmt.Errorf("failed to set value in redis: %w", err)

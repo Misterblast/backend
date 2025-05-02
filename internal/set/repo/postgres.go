@@ -1,26 +1,31 @@
 package repo
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
+	cache "github.com/ghulammuzz/misterblast/config/redis"
 	setEntity "github.com/ghulammuzz/misterblast/internal/set/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/redis/go-redis/v9"
 )
 
 type SetRepository interface {
 	Add(class setEntity.SetSet) error
 	Delete(id int32) error
-	List(filter map[string]string) ([]setEntity.ListSet, error)
+	List(ctx context.Context, filter map[string]string) ([]setEntity.ListSet, error)
 }
 
 type setRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	redis *redis.Client
 }
 
-func NewSetRepository(db *sql.DB) SetRepository {
-	return &setRepository{db: db}
+func NewSetRepository(db *sql.DB, redis *redis.Client) SetRepository {
+	return &setRepository{db, redis}
 }
 
 func (c *setRepository) Add(class setEntity.SetSet) error {
@@ -55,10 +60,24 @@ func (c *setRepository) Delete(id int32) error {
 	return nil
 }
 
-func (r *setRepository) List(filter map[string]string) ([]setEntity.ListSet, error) {
+func (r *setRepository) List(ctx context.Context, filter map[string]string) ([]setEntity.ListSet, error) {
+	redisKey := "set:list"
+	for k, v := range filter {
+		redisKey += fmt.Sprintf(":%s=%s", k, v)
+	}
+	if r.redis != nil {
+		cachedVal, err := cache.Get(ctx, redisKey, r.redis)
+		if err == nil && cachedVal != "" {
+			var cachedSets []setEntity.ListSet
+			if err := json.Unmarshal([]byte(cachedVal), &cachedSets); err == nil {
+				return cachedSets, nil
+			}
+		}
+	}
+
 	query := `SELECT s.id, s.name, l.name AS lesson, c.name AS class, s.is_quiz FROM sets s
-	JOIN lessons l ON s.lesson_id = l.id
-	JOIN classes c ON s.class_id = c.id WHERE 1=1`
+		JOIN lessons l ON s.lesson_id = l.id
+		JOIN classes c ON s.class_id = c.id WHERE 1=1`
 	args := []interface{}{}
 	argCounter := 1
 
@@ -74,11 +93,11 @@ func (r *setRepository) List(filter map[string]string) ([]setEntity.ListSet, err
 	}
 	if isQuiz, ok := filter["is_quiz"]; ok {
 		query += fmt.Sprintf(" AND s.is_quiz = $%d", argCounter)
-		args = append(args, isQuiz == "true") // Konversi string ke boolean
+		args = append(args, isQuiz == "true")
 		argCounter++
 	}
 
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Error("[Repo][ListSets] Error Query: ", err)
 		return nil, app.NewAppError(500, "failed to fetch sets")
@@ -98,6 +117,13 @@ func (r *setRepository) List(filter map[string]string) ([]setEntity.ListSet, err
 	if err := rows.Err(); err != nil {
 		log.Error("[Repo][ListSets] Error Iterating Rows: ", err)
 		return nil, app.NewAppError(500, "error iterating rows")
+	}
+
+	if r.redis != nil {
+		serialized, err := json.Marshal(sets)
+		if err == nil {
+			_ = cache.Set(ctx, redisKey, string(serialized), r.redis, cache.ExpBlazing)
+		}
 	}
 
 	return sets, nil

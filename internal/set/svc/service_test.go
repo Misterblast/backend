@@ -1,6 +1,7 @@
 package svc_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -26,8 +27,8 @@ func (m *MockSetRepository) Delete(id int32) error {
 	return args.Error(0)
 }
 
-func (m *MockSetRepository) List(filter map[string]string) ([]entity.ListSet, error) {
-	args := m.Called(filter)
+func (m *MockSetRepository) List(ctx context.Context, filter map[string]string) ([]entity.ListSet, error) {
+	args := m.Called(ctx, filter)
 	return args.Get(0).([]entity.ListSet), args.Error(1)
 }
 
@@ -62,9 +63,9 @@ func TestListSets(t *testing.T) {
 		{ID: 1, Name: "Set A", Lesson: "Math", Class: "Class 1"},
 		{ID: 2, Name: "Set B", Lesson: "Science", Class: "Class 2"},
 	}
-	mockRepo.On("List", mock.Anything).Return(mockSets, nil)
+	mockRepo.On("List", mock.Anything, mock.Anything).Return(mockSets, nil)
 
-	sets, err := service.ListSets(map[string]string{})
+	sets, err := service.ListSets(context.Background(), map[string]string{})
 	assert.NoError(t, err)
 	assert.Len(t, sets, 2)
 	mockRepo.AssertExpectations(t)
@@ -74,9 +75,9 @@ func TestListSets_Error(t *testing.T) {
 	mockRepo := new(MockSetRepository)
 	service := svc.NewSetService(mockRepo)
 
-	mockRepo.On("List", mock.Anything).Return([]entity.ListSet{}, errors.New("database error"))
+	mockRepo.On("List", mock.Anything, mock.Anything).Return([]entity.ListSet{}, errors.New("database error"))
 
-	sets, err := service.ListSets(map[string]string{})
+	sets, err := service.ListSets(context.Background(), map[string]string{})
 	assert.Error(t, err)
 	assert.Empty(t, sets)
 	mockRepo.AssertExpectations(t)

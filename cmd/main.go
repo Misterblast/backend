@@ -100,9 +100,9 @@ func main() {
 
 	api := app.Group("/v1")
 	// api := app.Group("/v2")
-	class.InitializedClassService(db).Router(api)
-	lesson.InitializedLessonService(db, validator.Validate).Router(api)
-	set.InitializedSetService(db, validator.Validate).Router(api)
+	class.InitializedClassService(db, redis).Router(api)
+	lesson.InitializedLessonService(db, redis, validator.Validate).Router(api)
+	set.InitializedSetService(db, redis, validator.Validate).Router(api)
 	question.InitializedQuestionService(db, redis, validator.Validate).Router(api)
 	user.InitializedUserService(db, validator.Validate).Router(api)
 	email.InitializedEmailService(db, validator.Validate).Router(api)

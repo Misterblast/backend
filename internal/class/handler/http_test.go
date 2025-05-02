@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -29,8 +30,8 @@ func (m *MockClassService) DeleteClass(id int32) error {
 	return args.Error(0)
 }
 
-func (m *MockClassService) ListClasses() ([]classEntity.Class, error) {
-	args := m.Called()
+func (m *MockClassService) ListClasses(ctx context.Context) ([]classEntity.Class, error) {
+	args := m.Called(ctx)
 	return args.Get(0).([]classEntity.Class), args.Error(1)
 }
 
@@ -77,7 +78,7 @@ func TestListClassesHandler(t *testing.T) {
 		{ID: 1, Name: "1"},
 		{ID: 2, Name: "2"},
 	}
-	mockService.On("ListClasses").Return(mockClasses, nil)
+	mockService.On("ListClasses", mock.Anything).Return(mockClasses, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/class", nil)
 	resp, _ := app.Test(req)

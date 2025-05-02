@@ -1,26 +1,31 @@
 package repo
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
+	cache "github.com/ghulammuzz/misterblast/config/redis"
 	classEntity "github.com/ghulammuzz/misterblast/internal/class/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/redis/go-redis/v9"
 )
 
 type ClassRepository interface {
 	Add(class classEntity.SetClass) error
 	Delete(id int32) error
-	List() ([]classEntity.Class, error)
+	List(ctx context.Context) ([]classEntity.Class, error)
 	Exists(class string) (bool, error)
 }
 type classRepository struct {
-	db *sql.DB
+	db    *sql.DB
+	redis *redis.Client
 }
 
-func NewClassRepository(db *sql.DB) ClassRepository {
-	return &classRepository{db: db}
+func NewClassRepository(db *sql.DB, redis *redis.Client) ClassRepository {
+	return &classRepository{db, redis}
 }
 
 func (c *classRepository) Exists(class string) (bool, error) {
@@ -73,7 +78,20 @@ func (c *classRepository) Delete(id int32) error {
 	return nil
 }
 
-func (c *classRepository) List() ([]classEntity.Class, error) {
+func (c *classRepository) List(ctx context.Context) ([]classEntity.Class, error) {
+	var classes []classEntity.Class
+
+	redisKey := "classes"
+
+	if c.redis != nil {
+		cached, err := cache.Get(ctx, redisKey, c.redis)
+		if err == nil && cached != "" {
+			if err := json.Unmarshal([]byte(cached), &classes); err == nil {
+				return classes, nil
+			}
+		}
+	}
+
 	query := `SELECT id, name FROM classes`
 	rows, err := c.db.Query(query)
 	if err != nil {
@@ -81,8 +99,6 @@ func (c *classRepository) List() ([]classEntity.Class, error) {
 		return nil, app.NewAppError(500, "failed to fetch classes")
 	}
 	defer rows.Close()
-
-	var classes []classEntity.Class
 
 	for rows.Next() {
 		var class classEntity.Class
@@ -96,6 +112,12 @@ func (c *classRepository) List() ([]classEntity.Class, error) {
 	if err := rows.Err(); err != nil {
 		log.Error("[Repo][ListClass] Error Iterating Rows: ", err)
 		return nil, fmt.Errorf("error after iterating rows: %w", err)
+	}
+
+	if c.redis != nil {
+		if dataJSON, err := json.Marshal(classes); err == nil {
+			_ = cache.Set(ctx, redisKey, string(dataJSON), c.redis, cache.ExpBlazing)
+		}
 	}
 
 	return classes, nil

@@ -1,6 +1,8 @@
 package svc
 
 import (
+	"context"
+
 	"github.com/ghulammuzz/misterblast/internal/lesson/entity"
 	"github.com/ghulammuzz/misterblast/internal/lesson/repo"
 	"github.com/ghulammuzz/misterblast/pkg/app"
@@ -10,7 +12,7 @@ import (
 type LessonService interface {
 	AddLesson(lesson entity.Lesson) error
 	DeleteLesson(id int32) error
-	ListLessons() ([]entity.Lesson, error)
+	ListLessons(ctx context.Context) ([]entity.Lesson, error)
 }
 
 type lessonService struct {
@@ -62,8 +64,8 @@ func (s *lessonService) DeleteLesson(id int32) error {
 	return nil
 }
 
-func (s *lessonService) ListLessons() ([]entity.Lesson, error) {
-	lessons, err := s.repo.List()
+func (s *lessonService) ListLessons(ctx context.Context) ([]entity.Lesson, error) {
+	lessons, err := s.repo.List(ctx)
 	if err != nil {
 		log.Error("[Svc][ListLessons] Error: ", err)
 		return nil, err

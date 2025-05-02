@@ -67,7 +67,7 @@ func (h *LessonHandler) DeleteLessonHandler(c *fiber.Ctx) error {
 }
 
 func (h *LessonHandler) ListLessonsHandler(c *fiber.Ctx) error {
-	lessons, err := h.lessonService.ListLessons()
+	lessons, err := h.lessonService.ListLessons(c.Context())
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

@@ -1,6 +1,8 @@
 package svc
 
 import (
+	"context"
+
 	setEntity "github.com/ghulammuzz/misterblast/internal/set/entity"
 	setRepo "github.com/ghulammuzz/misterblast/internal/set/repo"
 )
@@ -8,7 +10,7 @@ import (
 type SetService interface {
 	AddSet(set setEntity.SetSet) error
 	DeleteSet(id int32) error
-	ListSets(filter map[string]string) ([]setEntity.ListSet, error)
+	ListSets(ctx context.Context, filter map[string]string) ([]setEntity.ListSet, error)
 }
 
 type setService struct {
@@ -27,6 +29,6 @@ func (s *setService) DeleteSet(id int32) error {
 	return s.repo.Delete(id)
 }
 
-func (s *setService) ListSets(filter map[string]string) ([]setEntity.ListSet, error) {
-	return s.repo.List(filter)
+func (s *setService) ListSets(ctx context.Context, filter map[string]string) ([]setEntity.ListSet, error) {
+	return s.repo.List(ctx, filter)
 }

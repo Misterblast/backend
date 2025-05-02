@@ -1,6 +1,7 @@
 package repo_test
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 
@@ -15,7 +16,7 @@ func TestExists(t *testing.T) {
 	assert.NoError(t, err)
 	defer mockDB.Close()
 
-	repository := repo.NewClassRepository(mockDB)
+	repository := repo.NewClassRepository(mockDB, nil)
 
 	mock.ExpectQuery("SELECT 1 FROM classes WHERE name = \\$1").
 		WithArgs("Math").
@@ -47,7 +48,7 @@ func TestAddClass(t *testing.T) {
 	assert.NoError(t, err)
 	defer mockDB.Close()
 
-	repository := repo.NewClassRepository(mockDB)
+	repository := repo.NewClassRepository(mockDB, nil)
 
 	validClass := entity.SetClass{Name: "1"}
 	invalidClass := entity.SetClass{Name: "Invalid"}
@@ -71,7 +72,7 @@ func TestDeleteClass(t *testing.T) {
 	assert.NoError(t, err)
 	defer mockDB.Close()
 
-	repository := repo.NewClassRepository(mockDB)
+	repository := repo.NewClassRepository(mockDB, nil)
 
 	mock.ExpectExec("DELETE FROM classes WHERE id = ").
 		WithArgs(1).
@@ -87,7 +88,7 @@ func TestListClass(t *testing.T) {
 	assert.NoError(t, err)
 	defer mockDB.Close()
 
-	repository := repo.NewClassRepository(mockDB)
+	repository := repo.NewClassRepository(mockDB, nil)
 
 	rows := sqlmock.NewRows([]string{"id", "name"}).
 		AddRow(1, "1").
@@ -95,7 +96,7 @@ func TestListClass(t *testing.T) {
 
 	mock.ExpectQuery("SELECT id, name FROM classes").WillReturnRows(rows)
 
-	classes, err := repository.List()
+	classes, err := repository.List(context.TODO())
 	assert.NoError(t, err)
 	assert.Len(t, classes, 2)
 	assert.Equal(t, "1", classes[0].Name)

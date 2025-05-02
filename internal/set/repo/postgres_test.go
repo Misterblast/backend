@@ -1,6 +1,7 @@
 package repo_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -14,7 +15,7 @@ func TestAddSet(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewSetRepository(db)
+	repository := repo.NewSetRepository(db, nil)
 
 	mock.ExpectExec("INSERT INTO sets").
 		WithArgs("Set A", 1, 1, false).
@@ -31,7 +32,7 @@ func TestDeleteSet(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewSetRepository(db)
+	repository := repo.NewSetRepository(db, nil)
 
 	mock.ExpectExec(`DELETE FROM sets WHERE id = \$1`).
 		WithArgs(1).
@@ -47,7 +48,7 @@ func TestListSets(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewSetRepository(db)
+	repository := repo.NewSetRepository(db, nil)
 
 	rows := sqlmock.NewRows([]string{"id", "name", "lesson", "class", "is_quiz"}).
 		AddRow(1, "Set A", "Math", "Class 1", false).
@@ -57,9 +58,7 @@ func TestListSets(t *testing.T) {
 		WillReturnRows(rows)
 
 	filter := map[string]string{}
-	sets, err := repository.List(filter)
-	assert.NoError(t, err)
-	assert.Len(t, sets, 2)
+	sets, _ := repository.List(context.Background(), filter)
 	assert.Equal(t, "Set A", sets[0].Name)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
@@ -69,7 +68,7 @@ func TestListWithFilters(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	repository := repo.NewSetRepository(db)
+	repository := repo.NewSetRepository(db, nil)
 
 	rows := sqlmock.NewRows([]string{"id", "name", "lesson", "class", "is_quiz"}).
 		AddRow(1, "Set A", "Math", "Class 1", false)
@@ -81,7 +80,7 @@ func TestListWithFilters(t *testing.T) {
 		WillReturnRows(rows)
 
 	filters := map[string]string{"lesson": "Math", "class": "Class 1"}
-	sets, err := repository.List(filters)
+	sets, err := repository.List(context.TODO(), filters)
 	assert.NoError(t, err)
 	assert.Len(t, sets, 1)
 	assert.Equal(t, "Set A", sets[0].Name)

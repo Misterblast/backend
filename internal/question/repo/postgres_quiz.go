@@ -126,7 +126,7 @@ func (r *questionRepository) ListQuizQuestions(ctx context.Context, filter map[s
 
 	if r.redis != nil {
 		if dataJSON, err := json.Marshal(finalQuestions); err == nil {
-			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
 		}
 	}
 

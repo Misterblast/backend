@@ -79,7 +79,7 @@ func (h *SetHandler) ListSetsHandler(c *fiber.Ctx) error {
 		filter["is_quiz"] = isQuiz
 	}
 
-	sets, err := h.setService.ListSets(filter)
+	sets, err := h.setService.ListSets(c.Context(), filter)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

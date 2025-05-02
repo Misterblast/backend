@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -30,8 +31,8 @@ func (m *MockLessonService) DeleteLesson(id int32) error {
 	return args.Error(0)
 }
 
-func (m *MockLessonService) ListLessons() ([]entity.Lesson, error) {
-	args := m.Called()
+func (m *MockLessonService) ListLessons(ctx context.Context) ([]entity.Lesson, error) {
+	args := m.Called(ctx)
 	return args.Get(0).([]entity.Lesson), args.Error(1)
 }
 
@@ -81,7 +82,7 @@ func TestListLessonsHandler(t *testing.T) {
 		{ID: 1, Name: "Lesson 1"},
 		{ID: 2, Name: "Lesson 2"},
 	}
-	mockService.On("ListLessons").Return(mockLessons, nil)
+	mockService.On("ListLessons", mock.Anything).Return(mockLessons, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/lesson", nil)
 	resp, _ := app.Test(req)

@@ -12,12 +12,13 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/set/repo"
 	"github.com/ghulammuzz/misterblast/internal/set/svc"
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 )
 
 // Injectors from wire.go:
 
-func InitializedSetService(sb *sql.DB, val *validator.Validate) *handler.SetHandler {
-	setRepository := repo.NewSetRepository(sb)
+func InitializedSetService(sb *sql.DB, redis2 *redis.Client, val *validator.Validate) *handler.SetHandler {
+	setRepository := repo.NewSetRepository(sb, redis2)
 	setService := svc.NewSetService(setRepository)
 	setHandler := handler.NewSetHandler(setService, val)
 	return setHandler

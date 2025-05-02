@@ -1,6 +1,8 @@
 package svc
 
 import (
+	"context"
+
 	classEntity "github.com/ghulammuzz/misterblast/internal/class/entity"
 	classRepo "github.com/ghulammuzz/misterblast/internal/class/repo"
 	"github.com/ghulammuzz/misterblast/pkg/app"
@@ -10,7 +12,7 @@ import (
 type ClassService interface {
 	AddClass(class classEntity.SetClass) error
 	DeleteClass(id int32) error
-	ListClasses() ([]classEntity.Class, error)
+	ListClasses(ctx context.Context) ([]classEntity.Class, error)
 }
 
 type classService struct {
@@ -61,8 +63,8 @@ func (s *classService) DeleteClass(id int32) error {
 	return nil
 }
 
-func (s *classService) ListClasses() ([]classEntity.Class, error) {
-	classes, err := s.repo.List()
+func (s *classService) ListClasses(ctx context.Context) ([]classEntity.Class, error) {
+	classes, err := s.repo.List(ctx)
 	if err != nil {
 		log.Error("[Svc][ListClasses] Error: ", err)
 		return nil, err

@@ -1,6 +1,7 @@
 package svc_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -29,8 +30,8 @@ func (m *MockRepo) Delete(id int32) error {
 	return args.Error(0)
 }
 
-func (m *MockRepo) List() ([]classEntity.Class, error) {
-	args := m.Called()
+func (m *MockRepo) List(ctx context.Context) ([]classEntity.Class, error) {
+	args := m.Called(ctx)
 	return args.Get(0).([]classEntity.Class), args.Error(1)
 }
 
@@ -102,14 +103,14 @@ func TestListClasses(t *testing.T) {
 	svc := svc.NewClassService(mockRepo)
 
 	t.Run("should return error when List fails", func(t *testing.T) {
-		mockRepo.On("List").Return(([]classEntity.Class)(nil), errors.New("list error")).Once()
-		_, err := svc.ListClasses()
+		mockRepo.On("List", mock.Anything).Return(([]classEntity.Class)(nil), errors.New("list error")).Once()
+		_, err := svc.ListClasses(context.Background())
 		assert.EqualError(t, err, "list error")
 	})
 
 	t.Run("should list classes successfully", func(t *testing.T) {
-		mockRepo.On("List").Return([]classEntity.Class{{ID: 1, Name: "Math"}}, nil).Once()
-		classes, err := svc.ListClasses()
+		mockRepo.On("List", mock.Anything).Return([]classEntity.Class{{ID: 1, Name: "Math"}}, nil).Once()
+		classes, err := svc.ListClasses(context.Background())
 		assert.NoError(t, err)
 		assert.Len(t, classes, 1)
 		assert.Equal(t, "Math", classes[0].Name)
