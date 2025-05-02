@@ -1,6 +1,7 @@
 package repo_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -113,8 +114,7 @@ func TestListAdmin(t *testing.T) {
 	mock.ExpectQuery(`SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id`).
 		WillReturnRows(mockRows)
 
-	result, err := repository.ListAdmin(map[string]string{}, 1, 10)
-
+	result, err := repository.ListAdmin(context.Background(), map[string]string{}, 1, 10)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, int64(1), result.Total)

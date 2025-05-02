@@ -175,7 +175,7 @@ func (h *QuestionHandler) ListQuizHandler(c *fiber.Ctx) error {
 		filter["number"] = c.Query("number")
 	}
 
-	questions, err := h.questionService.ListQuizQuestions(filter)
+	questions, err := h.questionService.ListQuizQuestions(c.Context(), filter)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
@@ -212,7 +212,7 @@ func (h *QuestionHandler) ListQuestionAdminHandler(c *fiber.Ctx) error {
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
 
-	questions, err := h.questionService.ListAdmin(filter, page, limit)
+	questions, err := h.questionService.ListAdmin(c.Context(), filter, page, limit)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

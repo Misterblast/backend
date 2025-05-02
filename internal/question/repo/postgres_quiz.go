@@ -1,8 +1,11 @@
 package repo
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 
+	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
@@ -22,7 +25,19 @@ func (r *questionRepository) AddQuizAnswer(answer questionEntity.SetAnswer) erro
 	return nil
 }
 
-func (r *questionRepository) ListQuizQuestions(filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
+func (r *questionRepository) ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
+	redisKey := fmt.Sprintf("quiz:list:%s:%s:%s",
+		filter["set_id"], filter["type"], filter["number"],
+	)
+	if r.redis != nil {
+		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err == nil && cached != "" {
+			var cachedData []questionEntity.ListQuestionQuiz
+			if err := json.Unmarshal([]byte(cached), &cachedData); err == nil {
+				return cachedData, nil
+			}
+		}
+	}
 	query := `
 		SELECT q.id, q.number, q.type, q.format, q.content, q.set_id,
 			   COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 
@@ -107,6 +122,12 @@ func (r *questionRepository) ListQuizQuestions(filter map[string]string) ([]ques
 	finalQuestions := make([]questionEntity.ListQuestionQuiz, len(questions))
 	for i, q := range questions {
 		finalQuestions[i] = *q
+	}
+
+	if r.redis != nil {
+		if dataJSON, err := json.Marshal(finalQuestions); err == nil {
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+		}
 	}
 
 	return finalQuestions, nil

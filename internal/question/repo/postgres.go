@@ -25,12 +25,12 @@ type QuestionRepository interface {
 
 	// Answer
 	AddQuizAnswer(answer questionEntity.SetAnswer) error
-	ListQuizQuestions(filter map[string]string) ([]questionEntity.ListQuestionQuiz, error)
+	ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error)
 	DeleteAnswer(id int32) error
 	EditAnswer(id int32, answer questionEntity.EditAnswer) error
 
 	// Admin
-	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
+	ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 }
 
 type questionRepository struct {
@@ -68,10 +68,12 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 	var question questionEntity.DetailQuestionExample
 	redisKey := fmt.Sprintf("question:detail:%d", id)
 
-	cached, err := cache.Get(ctx, redisKey, r.redis)
-	if err == nil && cached != "" {
-		if err := json.Unmarshal([]byte(cached), &question); err == nil {
-			return question, nil
+	if r.redis != nil {
+		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err == nil && cached != "" {
+			if err := json.Unmarshal([]byte(cached), &question); err == nil {
+				return question, nil
+			}
 		}
 	}
 
@@ -91,7 +93,7 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 	GROUP BY q.id
 	`
 
-	err = r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRow(query, id).Scan(
 		&question.ID,
 		&question.Number,
 		&question.Type,
@@ -123,14 +125,16 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 	return question, nil
 }
 
-func (r *questionRepository) List(ctx context.Context,  filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
+func (r *questionRepository) List(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
 	var questions []questionEntity.ListQuestionExample
 	redisKey := fmt.Sprintf("question:list:%s", filter["set_id"])
-
-	cached, err := cache.Get(ctx, redisKey, r.redis)
-	if err == nil && cached != "" {
-		if err := json.Unmarshal([]byte(cached), &questions); err == nil {
-			return questions, nil
+	
+	if r.redis != nil {
+		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err == nil && cached != "" {
+			if err := json.Unmarshal([]byte(cached), &questions); err == nil {
+				return questions, nil
+			}
 		}
 	}
 	query := `SELECT id, number, type, format, content, explanation, set_id FROM questions WHERE 1=1 and deleted_at IS NULL`
@@ -163,10 +167,11 @@ func (r *questionRepository) List(ctx context.Context,  filter map[string]string
 		log.Error("[Repo][ListQuestions] Error Iterating Rows: ", err)
 		return nil, app.NewAppError(500, "error iterating rows")
 	}
-	dataJSON, err := json.Marshal(questions)
-	if err == nil {
-		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
-		// _ = r.redis.Set(ctx, redisKey, dataJSON, 10*time.Minute).Err()
+
+	if r.redis != nil {
+		if dataJSON, err := json.Marshal(questions); err == nil {
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+		}
 	}
 
 	return questions, nil

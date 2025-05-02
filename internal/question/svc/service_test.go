@@ -51,13 +51,13 @@ func (m *MockQuestionRepo) DeleteAnswer(id int32) error {
 	return args.Error(0)
 }
 
-func (m *MockQuestionRepo) ListQuizQuestions(filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
-	args := m.Called(filter)
+func (m *MockQuestionRepo) ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
+	args := m.Called(ctx, filter)
 	return args.Get(0).([]questionEntity.ListQuestionQuiz), args.Error(1)
 }
 
-func (m *MockQuestionRepo) ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
-	args := m.Called(filter, page, limit)
+func (m *MockQuestionRepo) ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
+	args := m.Called(ctx, filter, page, limit)
 	return args.Get(0).(*response.PaginateResponse), args.Error(1)
 }
 
@@ -86,9 +86,9 @@ func TestListAdminService(t *testing.T) {
 		Data:  mockData,
 	}
 
-	mockRepo.On("ListAdmin", mock.Anything, 1, 10).Return(mockResponse, nil)
+	mockRepo.On("ListAdmin", mock.Anything, mock.Anything, 1, 10).Return(mockResponse, nil)
 
-	result, err := service.ListAdmin(map[string]string{}, 1, 10)
+	result, err := service.ListAdmin(context.Background(), map[string]string{}, 1, 10)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, int64(1), result.Total) // Mengecek total data

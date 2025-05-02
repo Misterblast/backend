@@ -1,15 +1,45 @@
 package repo
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
+	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	"github.com/ghulammuzz/misterblast/pkg/log"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
-func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
+func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
+	var questions []questionEntity.ListQuestionAdmin
+	var total int64
+
+	cacheKeyParts := []string{"question:list"}
+	for _, key := range []string{"is_quiz", "lesson", "class", "set", "lang", "search"} {
+		cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("%s:%s", key, filter[key]))
+	}
+	cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("page:%d", page), fmt.Sprintf("limit:%d", limit))
+	redisKey := strings.Join(cacheKeyParts, "|")
+	if r.redis != nil {
+		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err == nil && cached != "" {
+			var cachedResp response.PaginateResponse
+			if err := json.Unmarshal([]byte(cached), &cachedResp); err == nil {
+				return &cachedResp, nil
+			}
+		}
+	}
+
+	// cached, err := cache.Get(ctx, redisKey, r.redis)
+	// if err == nil && cached != "" {
+	// 	if err := json.Unmarshal([]byte(cached), &questions); err == nil {
+	// 		return questions, nil
+	// 	}
+	// }
+
 	baseQuery := `
 		FROM questions q
 		JOIN sets s ON q.set_id = s.id
@@ -53,18 +83,15 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 		argCounter++
 	}
 
-	// Count total
 	countQuery := "SELECT COUNT(*) " + baseQuery + whereClause
-	var total int64
 	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
 		log.Error("[Repo][ListAdmin] Error Count Query:", err)
 		return nil, app.NewAppError(500, "failed to count admin questions")
 	}
 
-	// Query data with pagination
 	query := `
 		SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id,
-			   s.name AS set_name, l.name AS lesson_name, c.name AS class_name
+		       s.name AS set_name, l.name AS lesson_name, c.name AS class_name
 	` + baseQuery + whereClause + " ORDER BY q.number"
 
 	if limit > 0 {
@@ -85,7 +112,6 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 	}
 	defer rows.Close()
 
-	var questions []questionEntity.ListQuestionAdmin
 	for rows.Next() {
 		var q questionEntity.ListQuestionAdmin
 		err := rows.Scan(&q.ID, &q.Number, &q.Type, &q.Format, &q.Content, &q.Explanation, &q.IsQuiz, &q.SetID, &q.SetName, &q.LessonName, &q.ClassName)
@@ -101,6 +127,12 @@ func (r *questionRepository) ListAdmin(filter map[string]string, page, limit int
 		Page:  page,
 		Limit: limit,
 		Data:  questions,
+	}
+
+	if r.redis != nil {
+		if dataJSON, err := json.Marshal(response); err == nil {
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis)
+		}
 	}
 
 	return response, nil
