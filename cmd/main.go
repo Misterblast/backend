@@ -27,6 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/ghulammuzz/misterblast/pkg/log"
+	"github.com/ghulammuzz/misterblast/pkg/middleware"
 	metrics "github.com/ghulammuzz/misterblast/pkg/prom"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -70,6 +71,8 @@ func main() {
 		DisableStartupMessage: true,
 	})
 
+	app.Use(middleware.Cors())
+
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 
@@ -91,6 +94,7 @@ func main() {
 	})
 
 	log.Info(os.Getenv("JWT_SECRET"))
+	
 	app.Get("/hc", health.HealthCheck(db))
 	// app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 	http.Handle("/metrics", promhttp.Handler())
