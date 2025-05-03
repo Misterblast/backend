@@ -8,7 +8,7 @@ import (
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 )
 
 func (r *questionRepository) AddQuizAnswer(answer questionEntity.SetAnswer) error {

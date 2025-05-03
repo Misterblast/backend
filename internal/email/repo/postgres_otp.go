@@ -8,7 +8,8 @@ import (
 	"os"
 
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 )
 
 type OTP interface {

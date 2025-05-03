@@ -6,7 +6,8 @@ import (
 	classEntity "github.com/ghulammuzz/misterblast/internal/class/entity"
 	classRepo "github.com/ghulammuzz/misterblast/internal/class/repo"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 )
 
 type ClassService interface {

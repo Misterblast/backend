@@ -5,7 +5,7 @@ import (
 
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 )
 
 func (r *userRepository) AdminActivation(adminID int32) error {

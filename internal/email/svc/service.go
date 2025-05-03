@@ -6,7 +6,7 @@ import (
 	emailRepo "github.com/ghulammuzz/misterblast/internal/email/repo"
 	userRepo "github.com/ghulammuzz/misterblast/internal/user/repo"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 )
 
 type EmailService interface {

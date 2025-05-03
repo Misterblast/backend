@@ -7,7 +7,7 @@ import (
 	emailEntity "github.com/ghulammuzz/misterblast/internal/email/entity"
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"golang.org/x/crypto/bcrypt"
 )

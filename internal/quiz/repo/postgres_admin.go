@@ -5,7 +5,8 @@ import (
 
 	quizEntity "github.com/ghulammuzz/misterblast/internal/quiz/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
+
 	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 

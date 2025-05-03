@@ -6,7 +6,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/lesson/entity"
 	"github.com/ghulammuzz/misterblast/internal/lesson/repo"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 )
 
 type LessonService interface {

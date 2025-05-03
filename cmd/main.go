@@ -26,8 +26,8 @@ import (
 	user "github.com/ghulammuzz/misterblast/internal/user/di"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/ghulammuzz/misterblast/pkg/log"
 	"github.com/ghulammuzz/misterblast/pkg/middleware"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	metrics "github.com/ghulammuzz/misterblast/pkg/prom"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"

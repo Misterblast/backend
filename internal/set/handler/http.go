@@ -4,7 +4,7 @@ import (
 	"github.com/ghulammuzz/misterblast/internal/set/entity"
 	"github.com/ghulammuzz/misterblast/internal/set/svc"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"

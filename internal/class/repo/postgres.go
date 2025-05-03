@@ -9,7 +9,7 @@ import (
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	classEntity "github.com/ghulammuzz/misterblast/internal/class/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/redis/go-redis/v9"
 )
 

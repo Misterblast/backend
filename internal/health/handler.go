@@ -22,3 +22,7 @@ func HealthCheck(db *sql.DB) fiber.Handler {
 		})
 	}
 }
+
+func PanicTest(c *fiber.Ctx) error {
+	panic("Panic test")
+}

@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
+
 	_ "github.com/lib/pq"
 )
 

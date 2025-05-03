@@ -7,7 +7,7 @@ import (
 
 	"github.com/ghulammuzz/misterblast/internal/task/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
-	"github.com/ghulammuzz/misterblast/pkg/log"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
