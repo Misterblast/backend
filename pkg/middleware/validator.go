@@ -1,4 +1,4 @@
-package validator
+package middleware
 
 import (
 	"sync"
@@ -11,7 +11,7 @@ var (
 	onceValidator sync.Once
 )
 
-func InitValidator() {
+func Validator() {
 	onceValidator.Do(func() {
 		o := validator.New()
 		Validate = o

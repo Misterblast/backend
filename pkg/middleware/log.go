@@ -11,7 +11,7 @@ import (
 
 var Logger *slog.Logger
 
-func InitLogger(profile string, useLoki bool, lokiURL string) {
+func Log(profile string, useLoki bool, lokiURL string) {
 	var lokiClient *loki.Client
 	var err error
 
@@ -50,6 +50,8 @@ func SetProfileLog(profile string, useLoki bool, lokiClient *loki.Client) {
 
 	switch profile {
 	case "dev":
+		level = slog.LevelDebug
+	case "stg":
 		level = slog.LevelDebug
 	case "prod":
 		level = slog.LevelInfo

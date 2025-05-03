@@ -30,8 +30,8 @@ func NewTaskRepository(db *sql.DB) TaskRepository {
 
 func (r *TaskRepositoryImpl) List(filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	var total int64
-	countArgs := []interface{}{}
-	queryArgs := []interface{}{}
+	countArgs := []any{}
+	queryArgs := []any{}
 	argIndex := 1
 
 	// --- COUNT QUERY ---
