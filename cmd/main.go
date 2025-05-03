@@ -94,7 +94,6 @@ func main() {
 	})
 
 	log.Info(os.Getenv("JWT_SECRET"))
-	
 	app.Get("/hc", health.HealthCheck(db))
 	// app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 	http.Handle("/metrics", promhttp.Handler())
