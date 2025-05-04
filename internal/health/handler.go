@@ -3,6 +3,7 @@ package health
 import (
 	"database/sql"
 
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -25,4 +26,28 @@ func HealthCheck(db *sql.DB) fiber.Handler {
 
 func PanicTest(c *fiber.Ctx) error {
 	panic("Panic test")
+}
+
+func ErrorLogTest(c *fiber.Ctx) error {
+	log.Error("This is an error log test")
+	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		"status":  "error",
+		"message": "This is an error log test",
+	})
+}
+
+func InfoLogTest(c *fiber.Ctx) error {
+	log.Info("This is an info log test")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "ok",
+		"message": "This is an info log test",
+	})
+}
+
+func DebugLogTest(c *fiber.Ctx) error {
+	log.Debug("This is a debug log test")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "ok",
+		"message": "This is a debug log test",
+	})
 }

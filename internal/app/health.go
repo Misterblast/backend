@@ -3,18 +3,14 @@ package app
 import (
 	"database/sql"
 
+	"github.com/ghulammuzz/misterblast/internal/health"
 	"github.com/gofiber/fiber/v2"
 )
 
 func RegisterHealthRoutes(app *fiber.App, db *sql.DB) {
-	app.Get("/hc", func(c *fiber.Ctx) error {
-		if err := db.Ping(); err != nil {
-			return c.Status(500).SendString("Database not healthy")
-		}
-		return c.SendString("OK")
-	})
-
-	app.Get("/panic", func(c *fiber.Ctx) error {
-		panic("test panic")
-	})
+	app.Get("/hc", health.HealthCheck(db))
+	app.Get("/panic", health.PanicTest)
+	app.Get("/error", health.ErrorLogTest)
+	app.Get("/info", health.InfoLogTest)
+	app.Get("/debug", health.DebugLogTest)
 }
