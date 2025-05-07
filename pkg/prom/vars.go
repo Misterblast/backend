@@ -11,7 +11,7 @@ var (
 			Name: "http_requests_total",
 			Help: "Total HTTP requests received",
 		},
-		[]string{"path", "method"},
+		[]string{"path", "method", "status"},
 	)
 
 	RequestDuration = promauto.NewHistogramVec(

@@ -19,7 +19,7 @@ func Metrics() fiber.Handler {
 		method := c.Method()
 		status := fmt.Sprintf("%d", c.Response().StatusCode())
 
-		metrics.RequestCounter.WithLabelValues(path, method).Inc()
+		metrics.RequestCounter.WithLabelValues(path, method, status).Inc()
 
 		metrics.RequestDuration.WithLabelValues(path, method).Observe(duration)
 
