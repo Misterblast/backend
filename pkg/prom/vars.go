@@ -32,8 +32,8 @@ var (
 	)
 )
 
-func InitMetrics() {
-	prometheus.MustRegister(RequestCounter)
-	prometheus.MustRegister(RequestDuration)
-	prometheus.MustRegister(ErrorCounter)
-}
+// func InitMetrics() {
+// 	prometheus.MustRegister(RequestCounter)
+// 	prometheus.MustRegister(RequestDuration)
+// 	prometheus.MustRegister(ErrorCounter)
+// }
