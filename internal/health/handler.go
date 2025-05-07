@@ -29,7 +29,8 @@ func PanicTest(c *fiber.Ctx) error {
 }
 
 func ErrorLogTest(c *fiber.Ctx) error {
-	log.Error("This is an error log test")
+	err := sql.ErrNoRows
+	log.Error("This is an error log test : ", err)
 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 		"status":  "error",
 		"message": "This is an error log test",
