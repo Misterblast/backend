@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"log"
+	"os"
 
 	"github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/joho/godotenv"
@@ -24,6 +25,6 @@ func Init() {
 		log.Println("Environment: production (using system environment variables)")
 	}
 
-	middleware.Log(*env, false, "")
+	middleware.Log(*env, true, os.Getenv("LOKI_URL"))
 	middleware.Validator()
 }
