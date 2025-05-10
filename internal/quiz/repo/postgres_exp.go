@@ -45,7 +45,7 @@ func (r *quizRepository) GetLast(userID int) (quizEntity.QuizExp, error) {
 	quiz.AttemptNo = attemptNo
 
 	questionsQuery := `
-		SELECT id, number, content, format, explanation
+		SELECT id, number, content, format, explanation, reasoning
 		FROM questions
 		WHERE set_id = $1
 		ORDER BY number ASC
@@ -64,7 +64,7 @@ func (r *quizRepository) GetLast(userID int) (quizEntity.QuizExp, error) {
 	for rows.Next() {
 		var q quizEntity.QuizExpObj
 		var questionID int
-		if err := rows.Scan(&questionID, &q.Number, &q.QuestionContent, &q.Explanation, &q.Explanation); err != nil {
+		if err := rows.Scan(&questionID, &q.Number, &q.QuestionContent, &q.Format, &q.Explanation, &q.Reason); err != nil {
 			log.Error("[quizRepo.GetLast] failed to scan questions", err.Error())
 			return quizEntity.QuizExp{}, app.NewAppError(500, "failed to scan questions")
 		}

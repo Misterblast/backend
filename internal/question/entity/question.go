@@ -6,6 +6,7 @@ type Question struct {
 	Type        string `json:"type"`
 	Content     string `json:"content"`
 	Explanation string `json:"explanation"`
+	Reason      string `json:"reason"`
 	IsQuiz      bool   `json:"is_quiz"`
 	SetID       int32  `json:"set_id"`
 }

@@ -49,4 +49,6 @@ type QuizExpObj struct {
 	QuestionContent string `json:"question_content"`
 	IsCorrect       bool   `json:"is_correct"`
 	Explanation     string `json:"explanation"`
+	Reason          string `json:"reason"`
+	Format          string `format`
 }

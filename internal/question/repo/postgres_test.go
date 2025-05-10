@@ -108,10 +108,10 @@ func TestListAdmin(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 	// Mock data query
-	mockRows := sqlmock.NewRows([]string{"id", "number", "type", "format", "content", "explanation", "is_quiz", "set_id", "set_name", "lesson_name", "class_name"}).
-		AddRow(1, 1, "c4_faktual", "mm", "Question 1", "exp-1", true, 1, "Set 1", "Lesson 1", "Class 1")
+	mockRows := sqlmock.NewRows([]string{"id", "number", "type", "format", "content", "explanation", "reason", "is_quiz", "set_id", "set_name", "lesson_name", "class_name"}).
+		AddRow(1, 1, "c4_faktual", "mm", "Question 1", "exp-1", "r-1", true, 1, "Set 1", "Lesson 1", "Class 1")
 
-	mock.ExpectQuery(`SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id`).
+	mock.ExpectQuery(`SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.reasoning, q.is_quiz, q.set_id`).
 		WillReturnRows(mockRows)
 
 	result, err := repository.ListAdmin(context.Background(), map[string]string{}, 1, 10)

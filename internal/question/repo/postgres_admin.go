@@ -90,7 +90,7 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 	}
 
 	query := `
-		SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.is_quiz, q.set_id,
+		SELECT q.id, q.number, q.type, q.format, q.content, q.explanation, q.reasoning, q.is_quiz, q.set_id,
 		       s.name AS set_name, l.name AS lesson_name, c.name AS class_name
 	` + baseQuery + whereClause + " ORDER BY q.number"
 
@@ -114,7 +114,7 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 
 	for rows.Next() {
 		var q questionEntity.ListQuestionAdmin
-		err := rows.Scan(&q.ID, &q.Number, &q.Type, &q.Format, &q.Content, &q.Explanation, &q.IsQuiz, &q.SetID, &q.SetName, &q.LessonName, &q.ClassName)
+		err := rows.Scan(&q.ID, &q.Number, &q.Type, &q.Format, &q.Content, &q.Explanation, &q.Reason, &q.IsQuiz, &q.SetID, &q.SetName, &q.LessonName, &q.ClassName)
 		if err != nil {
 			log.Error("[Repo][ListAdmin] Error Scan:", err)
 			return nil, app.NewAppError(500, "failed to scan admin questions")
