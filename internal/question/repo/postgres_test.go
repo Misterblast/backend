@@ -19,7 +19,7 @@ func TestAddQuestion(t *testing.T) {
 	repository := repo.NewQuestionRepository(db, nil)
 
 	mock.ExpectExec(`INSERT INTO questions`).
-		WithArgs(1, "c4_faktual", "mm", "Sample Question", 1, "exp-1", "id").
+		WithArgs(1, "c4_faktual", "mm", "Sample Question", 1, "exp-1", "id", "r-1").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	question := questionEntity.SetQuestion{
@@ -29,6 +29,7 @@ func TestAddQuestion(t *testing.T) {
 		Format:      "mm",
 		Content:     "Sample Question",
 		Explanation: "exp-1",
+		Reason:      "r-1",
 	}
 
 	err = repository.Add(question, "id")
@@ -136,10 +137,10 @@ func TestEditQuestion(t *testing.T) {
 
 	repository := repo.NewQuestionRepository(db, nil)
 
-	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c4_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false, Explanation: "exp-1"}
+	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c4_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false, Explanation: "exp-1", Reason: "r-1"}
 
 	mock.ExpectExec(`UPDATE questions SET number =`).
-		WithArgs(editQuestion.Number, editQuestion.Type, editQuestion.Format, editQuestion.Content, editQuestion.IsQuiz, editQuestion.SetID, editQuestion.Explanation, 1).
+		WithArgs(editQuestion.Number, editQuestion.Type, editQuestion.Format, editQuestion.Content, editQuestion.IsQuiz, editQuestion.SetID, editQuestion.Explanation, editQuestion.Reason, 1).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	err = repository.Edit(1, editQuestion)

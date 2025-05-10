@@ -39,6 +39,9 @@ func (h *QuestionHandler) Router(r fiber.Router) {
 
 	// admin
 	r.Get("/admin-question", m.R100(), h.ListQuestionAdminHandler)
+
+	// question type
+	r.Get("/question-type", m.R100(), h.ListQuestionTypes)
 }
 
 func (h *QuestionHandler) AddQuestionHandler(c *fiber.Ctx) error {
@@ -274,4 +277,18 @@ func (h *QuestionHandler) EditAnswerHandler(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "answer updated successfully", nil)
+}
+
+// q type
+func (h *QuestionHandler) ListQuestionTypes(c *fiber.Ctx) error {
+	questionTypes, err := h.questionService.ListQuestionTypes(c.Context())
+	if err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "question types retrieved successfully", questionTypes)
 }

@@ -71,6 +71,11 @@ func (m *MockQuestionRepo) EditAnswer(id int32, answer questionEntity.EditAnswer
 	return args.Error(0)
 }
 
+func (m *MockQuestionRepo) ListQuestionTypes(ctx context.Context) ([]questionEntity.QuestionType, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]questionEntity.QuestionType), args.Error(1)
+}
+
 func TestListAdminService(t *testing.T) {
 	mockRepo := new(MockQuestionRepo)
 	service := svc.NewQuestionService(mockRepo)

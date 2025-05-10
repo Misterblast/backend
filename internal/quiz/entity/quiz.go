@@ -50,5 +50,5 @@ type QuizExpObj struct {
 	IsCorrect       bool   `json:"is_correct"`
 	Explanation     string `json:"explanation"`
 	Reason          string `json:"reason"`
-	Format          string `format`
+	Format          string `json:"format"`
 }

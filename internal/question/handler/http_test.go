@@ -72,6 +72,11 @@ func (m *MockQuestionService) EditQuizAnswer(id int32, answer questionEntity.Edi
 	return args.Error(0)
 }
 
+func (m *MockQuestionService) ListQuestionTypes(ctx context.Context) ([]questionEntity.QuestionType, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]questionEntity.QuestionType), args.Error(1)
+}
+
 func TestAddQuestionHandler(t *testing.T) {
 	app := fiber.New()
 	mockService := new(MockQuestionService)
@@ -89,6 +94,7 @@ func TestAddQuestionHandler(t *testing.T) {
 		Format:      "mm",
 		Content:     "Sample Question",
 		Explanation: "exp-1",
+		Reason:      "r-1",
 	}
 	questionJSON, _ := json.Marshal(question)
 
@@ -109,7 +115,7 @@ func TestEditQuestionHandler(t *testing.T) {
 	handler := handler.NewQuestionHandler(mockService, validate)
 	app.Put("/question/:id", handler.EditQuestionHandler)
 
-	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c3_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false, Explanation: "exp-1"}
+	editQuestion := questionEntity.EditQuestion{SetID: 9, Number: 2, Type: "c3_faktual", Format: "mm", Content: "Updated Content", IsQuiz: false, Explanation: "exp-1", Reason: "r-1"}
 	editJSON, _ := json.Marshal(editQuestion)
 
 	mockService.On("EditQuestion", int32(1), editQuestion).Return(nil)

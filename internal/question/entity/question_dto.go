@@ -6,7 +6,7 @@ type SetQuestion struct {
 	Format      string `json:"format" validate:"required,oneof=mm t/f sa mc4 mcx essay"`
 	Content     string `json:"content" validate:"required"`
 	Explanation string `json:"explanation" validate:"required"`
-	Reason      string `json:"reason"`
+	Reason      string `json:"reason" validate:"required"`
 	SetID       int32  `json:"set_id" validate:"required"`
 }
 
@@ -17,7 +17,7 @@ type EditQuestion struct {
 	Content     string `json:"content" validate:"required"`
 	IsQuiz      bool   `json:"is_quiz"`
 	Explanation string `json:"explanation" validate:"required"`
-	Reason      string `json:"reason"`
+	Reason      string `json:"reason" validate:"required"`
 	SetID       int32  `json:"set_id" validate:"required"`
 }
 
@@ -67,4 +67,10 @@ type ListQuestionAdmin struct {
 	ClassName   string `json:"class_name"`
 	Explanation string `json:"explanation"`
 	Reason      string `json:"reason"`
+}
+
+type QuestionType struct {
+	IndonesianName string `json:"ina_name"`
+	EnglishName    string `json:"eng_name"`
+	Code           string `json:"code"`
 }

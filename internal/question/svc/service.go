@@ -25,6 +25,9 @@ type QuestionService interface {
 
 	// Admin
 	ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error)
+
+	// Q Type
+	ListQuestionTypes(ctx context.Context) ([]questionEntity.QuestionType, error)
 }
 
 type questionService struct {
@@ -87,4 +90,9 @@ func (s *questionService) DeleteAnswer(id int32) error {
 
 func (s *questionService) DetailQuestion(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error) {
 	return s.repo.Detail(ctx, id)
+}
+
+// Q Type
+func (s *questionService) ListQuestionTypes(ctx context.Context) ([]questionEntity.QuestionType, error) {
+	return s.repo.ListQuestionTypes(ctx)
 }

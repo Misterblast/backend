@@ -31,6 +31,9 @@ type QuestionRepository interface {
 
 	// Admin
 	ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error)
+
+	// Q Type
+	ListQuestionTypes(ctx context.Context) ([]questionEntity.QuestionType, error)
 }
 
 type questionRepository struct {
@@ -44,8 +47,8 @@ func NewQuestionRepository(db *sql.DB, redis *redis.Client) QuestionRepository {
 
 func (r *questionRepository) Add(question questionEntity.SetQuestion, lang string) error {
 	query := `
-		INSERT INTO questions (number, type, format, content, is_quiz, explanation, set_id, lang)
-		VALUES ($1, $2, $3, $4, (SELECT is_quiz FROM sets WHERE id = $5), $6, $5, $7)
+		INSERT INTO questions (number, type, format, content, is_quiz, explanation, set_id, lang, reasoning)
+		VALUES ($1, $2, $3, $4, (SELECT is_quiz FROM sets WHERE id = $5), $6, $5, $7, $8)
 	`
 	_, err := r.db.Exec(query,
 		question.Number,
@@ -55,6 +58,7 @@ func (r *questionRepository) Add(question questionEntity.SetQuestion, lang strin
 		question.SetID,
 		question.Explanation,
 		lang,
+		question.Reason,
 	)
 
 	if err != nil {
@@ -80,7 +84,7 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 	var answersJSON []byte
 	query := `
 	SELECT 
-		q.id, q.number, q.type, q.format, q.content, q.explanation, q.set_id,
+		q.id, q.number, q.type, q.format, q.content, q.explanation, q.reasoning, q.set_id,
 		COALESCE(json_agg(json_build_object(
 			'id', a.id,
 			'code', a.code,
@@ -100,6 +104,7 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 		&question.Format,
 		&question.Content,
 		&question.Explanation,
+		&question.Reason,
 		&question.SetID,
 		&answersJSON,
 	)
@@ -115,6 +120,7 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 		log.Error("[Repo][DetailQuestion] Error unmarshalling answers:", err)
 		return question, app.NewAppError(500, "failed to parse answers")
 	}
+	// log.Debug("Reason : ", question.Reason)
 
 	dataJSON, err := json.Marshal(question)
 	if err == nil {
@@ -212,10 +218,10 @@ func (r *questionRepository) Exists(setID int32, number int) (bool, error) {
 func (r *questionRepository) Edit(id int32, question questionEntity.EditQuestion) error {
 	query := `
 		UPDATE questions 
-		SET number = $1, type = $2, content = $4, format = $3, is_quiz = $5, set_id = $6, explanation = $7
-		WHERE id = $8`
+		SET number = $1, type = $2, content = $4, format = $3, is_quiz = $5, set_id = $6, explanation = $7, reasoning = $8
+		WHERE id = $9`
 
-	_, err := r.db.Exec(query, question.Number, question.Type, question.Format, question.Content, question.IsQuiz, question.SetID, question.Explanation, id)
+	_, err := r.db.Exec(query, question.Number, question.Type, question.Format, question.Content, question.IsQuiz, question.SetID, question.Explanation, question.Reason, id)
 	if err != nil {
 		log.Error("[Repo][EditQuestion] Error updating question:", err)
 		return app.NewAppError(500, err.Error())
