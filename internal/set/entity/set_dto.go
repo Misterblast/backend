@@ -1,7 +1,7 @@
 package entity
 
 type SetSet struct {
-	Name     string `json:"name" validate:"required,min=2,max=20"`
+	Name     string `json:"name" validate:"required,min=2,max=50"`
 	IsQuiz   bool   `json:"is_quiz"`
 	LessonID int32  `json:"lesson_id" validate:"required"`
 	ClassID  int32  `json:"class_id" validate:"required"`
