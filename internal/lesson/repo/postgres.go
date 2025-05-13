@@ -44,8 +44,8 @@ func (r *lessonRepository) Exists(lesson string) (bool, error) {
 }
 
 func (r *lessonRepository) Add(lesson entity.Lesson) error {
-	query := `INSERT INTO lessons (name) VALUES ($1)`
-	_, err := r.db.Exec(query, lesson.Name)
+	query := `INSERT INTO lessons (name, code) VALUES ($1)`
+	_, err := r.db.Exec(query, lesson.Name, lesson.Code)
 	if err != nil {
 		log.Error("[Repo][AddLesson] Error: ", err)
 		return app.NewAppError(500, "failed to add lesson")
@@ -87,7 +87,7 @@ func (r *lessonRepository) List(ctx context.Context) ([]entity.Lesson, error) {
 		}
 	}
 
-	query := `SELECT id, name FROM lessons order by id`
+	query := `SELECT id, name, code FROM lessons order by id`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		log.Error("[Repo][ListLessons] Error Query: ", err)
@@ -97,7 +97,7 @@ func (r *lessonRepository) List(ctx context.Context) ([]entity.Lesson, error) {
 
 	for rows.Next() {
 		var lesson entity.Lesson
-		if err := rows.Scan(&lesson.ID, &lesson.Name); err != nil {
+		if err := rows.Scan(&lesson.ID, &lesson.Name, &lesson.Code); err != nil {
 			log.Error("[Repo][ListLessons] Error Scan: ", err)
 			return nil, app.NewAppError(500, "failed to scan lesson")
 		}
