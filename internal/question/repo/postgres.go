@@ -124,7 +124,7 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 
 	dataJSON, err := json.Marshal(question)
 	if err == nil {
-		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpFast)
+		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpSecond)
 		// _ = r.redis.Set(ctx, redisKey, dataJSON, 10*time.Minute).Err()
 	}
 

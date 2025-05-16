@@ -16,6 +16,7 @@ const (
 	FastEXP     = 5 * time.Minute
 	BlazingEXP  = 3 * time.Minute
 	InstantEXP  = 1 * time.Minute
+	SecondEXP   = 30 * time.Second
 )
 
 type ExpirationType string
@@ -25,6 +26,8 @@ const (
 	ExpStandard ExpirationType = "standard"
 	ExpLong     ExpirationType = "long"
 	ExpBlazing  ExpirationType = "blazing"
+	ExpInstant  ExpirationType = "instant"
+	ExpSecond   ExpirationType = "second"
 )
 
 func InitRedis() (*redis.Client, error) {

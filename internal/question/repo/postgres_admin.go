@@ -131,7 +131,7 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 
 	if r.redis != nil {
 		if dataJSON, err := json.Marshal(response); err == nil {
-			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpSecond)
 		}
 	}
 
