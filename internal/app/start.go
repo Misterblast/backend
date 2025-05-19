@@ -13,8 +13,13 @@ func Start() {
 	db, _ := pg.InitPostgres()
 	defer db.Close()
 
-	redis, _ := cache.InitRedis()
-	defer redis.Close()
+	redis, err := cache.InitRedis()
+	if err != nil {
+		log.Warn("Redis not available, continuing without cache: %v", err)
+		redis = nil
+	} else {
+		defer redis.Close()
+	}
 
 	app := SetupRouter(db, redis)
 
