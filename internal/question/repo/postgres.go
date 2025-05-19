@@ -121,11 +121,11 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 		return question, app.NewAppError(500, "failed to parse answers")
 	}
 	// log.Debug("Reason : ", question.Reason)
-
 	dataJSON, err := json.Marshal(question)
-	if err == nil {
-		_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpSecond)
-		// _ = r.redis.Set(ctx, redisKey, dataJSON, 10*time.Minute).Err()
+	if r.redis != nil {
+		if dataJSON, err := json.Marshal(dataJSON); err == nil {
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
+		}
 	}
 
 	return question, nil
