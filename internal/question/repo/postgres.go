@@ -121,9 +121,8 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 		return question, app.NewAppError(500, "failed to parse answers")
 	}
 	// log.Debug("Reason : ", question.Reason)
-	dataJSON, err := json.Marshal(question)
 	if r.redis != nil {
-		if dataJSON, err := json.Marshal(dataJSON); err == nil {
+		if dataJSON, err := json.Marshal(question); err == nil {
 			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
 		}
 	}
