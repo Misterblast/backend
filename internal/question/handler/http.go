@@ -178,6 +178,13 @@ func (h *QuestionHandler) ListQuizHandler(c *fiber.Ctx) error {
 		filter["number"] = c.Query("number")
 	}
 
+	if c.Query("class_id") != "" {
+		filter["class_id"] = c.Query("class_id")
+	}
+	if c.Query("lesson_id") != "" {
+		filter["lesson_id"] = c.Query("lesson_id")
+	}
+
 	questions, err := h.questionService.ListQuizQuestions(c.Context(), filter)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)

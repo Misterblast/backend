@@ -67,7 +67,7 @@ func (s *questionService) DeleteQuestion(id int32) error {
 // Quiz
 
 func (s *questionService) ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
-	return s.repo.ListQuizQuestions(ctx, filter)
+	return s.repo.ListQuizQuestionsLessonClass(ctx, filter)
 }
 
 // admin

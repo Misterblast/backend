@@ -26,6 +26,7 @@ type QuestionRepository interface {
 	// Answer
 	AddQuizAnswer(answer questionEntity.SetAnswer) error
 	ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error)
+	ListQuizQuestionsLessonClass(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error)
 	DeleteAnswer(id int32) error
 	EditAnswer(id int32, answer questionEntity.EditAnswer) error
 

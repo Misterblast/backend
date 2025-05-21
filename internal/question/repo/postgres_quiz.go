@@ -163,3 +163,124 @@ func (r *questionRepository) EditAnswer(id int32, answer questionEntity.EditAnsw
 
 	return nil
 }
+
+func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
+	var setID string
+
+	if val, ok := filter["set_id"]; ok && val != "" {
+		setID = val
+	} else {
+		lessonID, hasLesson := filter["lesson_id"]
+		classID, hasClass := filter["class_id"]
+
+		if !hasLesson || !hasClass {
+			return nil, app.NewAppError(400, "lesson_id and class_id are required if set_id is not provided")
+		}
+
+		querySet := `
+			SELECT id FROM sets
+			WHERE is_quiz = true AND lesson_id = $1 AND class_id = $2
+			ORDER BY RANDOM()
+			LIMIT 1
+		`
+		err := r.db.QueryRowContext(ctx, querySet, lessonID, classID).Scan(&setID)
+		if err != nil {
+			log.Error("[Repo][ListQuizQuestions] Failed to get random set_id: ", err)
+			return nil, app.NewAppError(404, "no quiz set found for specified lesson and class")
+		}
+	}
+
+	redisKey := fmt.Sprintf("quiz:list:%s:%s:%s", setID, filter["type"], filter["number"])
+	if r.redis != nil {
+		if cached, err := cache.Get(ctx, redisKey, r.redis); err == nil && cached != "" {
+			var cachedData []questionEntity.ListQuestionQuiz
+			if err := json.Unmarshal([]byte(cached), &cachedData); err == nil {
+				return cachedData, nil
+			}
+		}
+	}
+
+	query := `
+		SELECT q.id, q.number, q.type, q.format, q.content, q.set_id,
+			   COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 
+			   COALESCE(a.content, '') AS answer_content, COALESCE(a.img_url, '') AS img_url
+		FROM questions q
+		LEFT JOIN answers a ON q.id = a.question_id
+		WHERE q.is_quiz = true AND q.set_id = $1
+	`
+	args := []interface{}{setID}
+	argCounter := 2
+
+	if questionType, exists := filter["type"]; exists && questionType != "" {
+		query += fmt.Sprintf(" AND q.type = $%d", argCounter)
+		args = append(args, questionType)
+		argCounter++
+	}
+	if number, exists := filter["number"]; exists && number != "" {
+		query += fmt.Sprintf(" AND q.number = $%d", argCounter)
+		args = append(args, number)
+		argCounter++
+	}
+
+	query += " ORDER BY q.number, a.code"
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		log.Error("[Repo][ListQuizQuestions] Error Query: ", err)
+		return nil, app.NewAppError(500, "failed to fetch quiz questions")
+	}
+	defer rows.Close()
+
+	questionsMap := make(map[int32]*questionEntity.ListQuestionQuiz)
+	var questions []*questionEntity.ListQuestionQuiz
+
+	for rows.Next() {
+		var qID, aID, setIDInt int32
+		var number int
+		var qType, qFormat, content, code, aContent, imgURL string
+
+		err := rows.Scan(&qID, &number, &qType, &qFormat, &content, &setIDInt, &aID, &code, &aContent, &imgURL)
+		if err != nil {
+			log.Error("[Repo][ListQuizQuestions] Error Scan: ", err)
+			return nil, app.NewAppError(500, "failed to scan quiz questions")
+		}
+
+		if _, exists := questionsMap[qID]; !exists {
+			questionsMap[qID] = &questionEntity.ListQuestionQuiz{
+				ID:      qID,
+				Number:  number,
+				Type:    qType,
+				Format:  qFormat,
+				Content: content,
+				SetID:   setIDInt,
+				Answers: []questionEntity.ListAnswer{},
+			}
+			questions = append(questions, questionsMap[qID])
+		}
+
+		if aID != 0 {
+			answer := questionEntity.ListAnswer{
+				ID:      aID,
+				Code:    code,
+				Content: aContent,
+			}
+			if imgURL != "" {
+				answer.ImgURL = &imgURL
+			}
+			questionsMap[qID].Answers = append(questionsMap[qID].Answers, answer)
+		}
+	}
+
+	finalQuestions := make([]questionEntity.ListQuestionQuiz, len(questions))
+	for i, q := range questions {
+		finalQuestions[i] = *q
+	}
+
+	if r.redis != nil {
+		if dataJSON, err := json.Marshal(finalQuestions); err == nil {
+			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
+		}
+	}
+
+	return finalQuestions, nil
+}

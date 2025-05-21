@@ -13,3 +13,5 @@ deployment/docker-compose.dev.yaml
 Dockerfile
 notes
 check.html
+dump-*
+schema-*

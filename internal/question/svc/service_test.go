@@ -56,6 +56,11 @@ func (m *MockQuestionRepo) ListQuizQuestions(ctx context.Context, filter map[str
 	return args.Get(0).([]questionEntity.ListQuestionQuiz), args.Error(1)
 }
 
+func (m *MockQuestionRepo) ListQuizQuestionsLessonClass(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
+	args := m.Called(ctx, filter)
+	return args.Get(0).([]questionEntity.ListQuestionQuiz), args.Error(1)
+}
+
 func (m *MockQuestionRepo) ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	args := m.Called(ctx, filter, page, limit)
 	return args.Get(0).(*response.PaginateResponse), args.Error(1)
