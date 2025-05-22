@@ -76,6 +76,15 @@ func (h *QuestionHandler) ListQuestionsHandler(c *fiber.Ctx) error {
 	if setID := c.Query("set_id"); setID != "" {
 		filter["set_id"] = setID
 	}
+	if lessonID := c.Query("lesson_id"); lessonID != "" {
+		filter["lesson_id"] = lessonID
+	}
+	if classID := c.Query("class_id"); classID != "" {
+		filter["class_id"] = classID
+	}
+	if isQuiz := c.Query("is_quiz"); isQuiz != "" {
+		filter["is_quiz"] = isQuiz
+	}
 
 	questions, err := h.questionService.ListQuestions(c.Context(), filter)
 	if err != nil {

@@ -131,58 +131,6 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 	return question, nil
 }
 
-func (r *questionRepository) List(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
-	var questions []questionEntity.ListQuestionExample
-	redisKey := fmt.Sprintf("question:list:%s", filter["set_id"])
-
-	if r.redis != nil {
-		cached, err := cache.Get(ctx, redisKey, r.redis)
-		if err == nil && cached != "" {
-			if err := json.Unmarshal([]byte(cached), &questions); err == nil {
-				return questions, nil
-			}
-		}
-	}
-	query := `SELECT id, number, type, format, content, explanation, set_id FROM questions WHERE 1=1 and deleted_at IS NULL`
-	args := []any{}
-	argCounter := 1
-
-	if setID, ok := filter["set_id"]; ok {
-		query += fmt.Sprintf(" AND set_id = $%d", argCounter)
-		args = append(args, setID)
-		argCounter++
-	}
-
-	rows, err := r.db.Query(query, args...)
-	if err != nil {
-		log.Error("[Repo][ListQuestions] Error Query: ", err)
-		return nil, app.NewAppError(500, err.Error())
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var question questionEntity.ListQuestionExample
-		if err := rows.Scan(&question.ID, &question.Number, &question.Type, &question.Format, &question.Content, &question.Explanation, &question.SetID); err != nil {
-			log.Error("[Repo][ListQuestions] Error Scan: ", err)
-			return nil, app.NewAppError(500, "failed to scan question")
-		}
-		questions = append(questions, question)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Error("[Repo][ListQuestions] Error Iterating Rows: ", err)
-		return nil, app.NewAppError(500, "error iterating rows")
-	}
-
-	if r.redis != nil {
-		if dataJSON, err := json.Marshal(questions); err == nil {
-			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
-		}
-	}
-
-	return questions, nil
-}
-
 func (r *questionRepository) Delete(id int32) error {
 	const query = `
 		UPDATE questions
