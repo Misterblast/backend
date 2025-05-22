@@ -78,7 +78,7 @@ func (r *setRepository) List(ctx context.Context, filter map[string]string) ([]s
 	query := `SELECT s.id, s.name, l.name AS lesson, c.name AS class, s.is_quiz FROM sets s
 		JOIN lessons l ON s.lesson_id = l.id
 		JOIN classes c ON s.class_id = c.id WHERE 1=1`
-	args := []interface{}{}
+	args := []any{}
 	argCounter := 1
 
 	if lesson, ok := filter["lesson"]; ok {
@@ -96,6 +96,8 @@ func (r *setRepository) List(ctx context.Context, filter map[string]string) ([]s
 		args = append(args, isQuiz == "true")
 		argCounter++
 	}
+
+	query += " ORDER BY s.name"
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {

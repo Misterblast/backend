@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
@@ -222,7 +223,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		argCounter++
 	}
 
-	query += " ORDER BY q.number, a.code"
+	query += " ORDER BY q.id, a.code"
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -275,6 +276,10 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 	for i, q := range questions {
 		finalQuestions[i] = *q
 	}
+
+	rand.Shuffle(len(finalQuestions), func(i, j int) {
+		finalQuestions[i], finalQuestions[j] = finalQuestions[j], finalQuestions[i]
+	})
 
 	if r.redis != nil {
 		if dataJSON, err := json.Marshal(finalQuestions); err == nil {
