@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 
@@ -33,6 +35,8 @@ func (h *QuestionHandler) Router(r fiber.Router) {
 	r.Put("/answer/:id", m.R100(), h.EditAnswerHandler)
 	r.Post("/quiz-answer", m.R100(), h.AddQuizAnswerHandler)
 	r.Post("/question-answer", m.R100(), h.AddQuizAnswerHandler)
+	r.Post("/quiz-answer-bulk", m.R100(), h.AddQuizAnswerBulkHandler)
+	r.Post("/question-answer-bulk", m.R100(), h.AddQuizAnswerBulkHandler)
 
 	// quiz
 	r.Get("/quiz", m.R100(), h.ListQuizHandler)
@@ -154,6 +158,29 @@ func (h *QuestionHandler) AddQuizAnswerHandler(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "answer added successfully", nil)
+}
+
+func (h *QuestionHandler) AddQuizAnswerBulkHandler(c *fiber.Ctx) error {
+	var answers []entity.SetAnswer
+	if err := c.BodyParser(&answers); err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	for i, ans := range answers {
+		if err := h.val.Struct(ans); err != nil {
+			return response.SendError(c, fiber.StatusBadRequest,
+				fmt.Sprintf("Validation failed at index %d", i),
+				err.Error())
+		}
+	}
+
+	if err := h.questionService.AddQuizAnswerBulk(answers); err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+	return response.SendSuccess(c, "answers added successfully", nil)
 }
 
 func (h *QuestionHandler) DeleteAnswerHandler(c *fiber.Ctx) error {

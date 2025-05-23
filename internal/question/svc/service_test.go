@@ -81,6 +81,11 @@ func (m *MockQuestionRepo) ListQuestionTypes(ctx context.Context) ([]questionEnt
 	return args.Get(0).([]questionEntity.QuestionType), args.Error(1)
 }
 
+func (m *MockQuestionRepo) AddQuizAnswerBulk(answers []questionEntity.SetAnswer) error {
+	args := m.Called(answers)
+	return args.Error(0)
+}
+
 func TestListAdminService(t *testing.T) {
 	mockRepo := new(MockQuestionRepo)
 	service := svc.NewQuestionService(mockRepo)
@@ -186,11 +191,10 @@ func TestEditAnswerService(t *testing.T) {
 	service := svc.NewQuestionService(mockRepo)
 
 	answer := questionEntity.EditAnswer{
-		QuestionID: 8,
-		Code:       "a",
-		Content:    "Updated Question",
-		ImgURL:     func(s string) *string { return &s }("http://random"),
-		IsAnswer:   true,
+		Code:     "a",
+		Content:  "Updated Question",
+		ImgURL:   func(s string) *string { return &s }("http://random"),
+		IsAnswer: true,
 	}
 
 	mockRepo.On("EditAnswer", int32(1), answer).Return(nil)

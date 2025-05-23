@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
@@ -21,6 +22,36 @@ func (r *questionRepository) AddQuizAnswer(answer questionEntity.SetAnswer) erro
 	if err != nil {
 		log.Error("[Repo][AddQuizAnswer] Error inserting answer: ", err)
 		return app.NewAppError(500, "failed to insert quiz answer")
+	}
+
+	return nil
+}
+
+func (r *questionRepository) AddQuizAnswerBulk(answers []questionEntity.SetAnswer) error {
+	if len(answers) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO answers (question_id, code, content, img_url, is_answer) VALUES 
+	`
+
+	valueArgs := []interface{}{}
+	placeholders := []string{}
+
+	for i, answer := range answers {
+		start := i * 5
+		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
+			start+1, start+2, start+3, start+4, start+5))
+		valueArgs = append(valueArgs, answer.QuestionID, answer.Code, answer.Content, answer.ImgURL, answer.IsAnswer)
+	}
+
+	query += strings.Join(placeholders, ", ")
+
+	_, err := r.db.Exec(query, valueArgs...)
+	if err != nil {
+		log.Error("[Repo][AddQuizAnswerBulk] Error bulk inserting answers: ", err)
+		return app.NewAppError(500, "failed to bulk insert quiz answers")
 	}
 
 	return nil
@@ -153,10 +184,10 @@ func (r *questionRepository) DeleteAnswer(id int32) error {
 func (r *questionRepository) EditAnswer(id int32, answer questionEntity.EditAnswer) error {
 	query := `
 		UPDATE answers 
-		SET question_id = $1, code = $2, content = $3, img_url = $4, is_answer = $5 
-		WHERE id = $6`
+		SET code = $1, content = $2, img_url = $3, is_answer = $4 
+		WHERE id = $5`
 
-	_, err := r.db.Exec(query, answer.QuestionID, answer.Code, answer.Content, answer.ImgURL, answer.IsAnswer, id)
+	_, err := r.db.Exec(query, answer.Code, answer.Content, answer.ImgURL, answer.IsAnswer, id)
 	if err != nil {
 		log.Error("[Repo][EditAnswer] Error updating answer:", err)
 		return app.NewAppError(500, err.Error())
