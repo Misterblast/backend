@@ -253,6 +253,11 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		args = append(args, number)
 		argCounter++
 	}
+	if lang, exists := filter["lang"]; exists && lang != "" {
+		query += fmt.Sprintf(" AND q.lang = $%d", argCounter)
+		args = append(args, lang)
+		argCounter++
+	}
 
 	query += " ORDER BY q.id, a.code"
 

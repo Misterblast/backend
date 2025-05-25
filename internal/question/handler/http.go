@@ -220,6 +220,13 @@ func (h *QuestionHandler) ListQuizHandler(c *fiber.Ctx) error {
 	if c.Query("lesson_id") != "" {
 		filter["lesson_id"] = c.Query("lesson_id")
 	}
+	lang := c.Get("Lang")
+	if lang == "" {
+		lang = "id"
+	} else if lang != "id" && lang != "en" {
+		return response.SendError(c, 400, "invalid lang, only 'id' or 'en' allowed", nil)
+	}
+	filter["lang"] = lang
 
 	questions, err := h.questionService.ListQuizQuestions(c.Context(), filter)
 	if err != nil {
@@ -251,9 +258,13 @@ func (h *QuestionHandler) ListQuestionAdminHandler(c *fiber.Ctx) error {
 	if c.Query("search") != "" {
 		filter["search"] = c.Query("search")
 	}
-	if c.Query("lang") != "" {
-		filter["lang"] = c.Query("lang")
+	lang := c.Get("Lang")
+	if lang == "" {
+		lang = "id"
+	} else if lang != "id" && lang != "en" {
+		return response.SendError(c, 400, "invalid lang, only 'id' or 'en' allowed", nil)
 	}
+	filter["lang"] = lang
 
 	page := c.QueryInt("page", 1)
 	limit := c.QueryInt("limit", 10)
