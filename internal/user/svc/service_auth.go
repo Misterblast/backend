@@ -3,7 +3,9 @@ package svc
 import (
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"os"
+	"time"
 
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	"github.com/ghulammuzz/misterblast/internal/user/repo"
@@ -15,11 +17,14 @@ func (s *userService) Register(user userEntity.RegisterDTO) error {
 		return errors.New("password must be at least 6 characters")
 	}
 
-	var regUser userEntity.Register
-	regUser.Name = user.Name
-	regUser.Email = user.Email
-	regUser.Password = user.Password
+	log.Info("[RegisterSvc] Start AddRepo")
+	startAddRepo := time.Now()
 
+	regUser := userEntity.Register{
+		Name:     user.Name,
+		Email:    user.Email,
+		Password: user.Password,
+	}
 	isVerified := true
 
 	id, err := s.userRepo.Add(regUser, isVerified)
@@ -27,19 +32,28 @@ func (s *userService) Register(user userEntity.RegisterDTO) error {
 		log.Error("[UserSvc] Failed to register user", "error", err)
 		return err
 	}
+	log.Info("[RegisterSvc] End AddRepo", "Total Duration", time.Since(startAddRepo))
 
 	if user.Img != nil {
+		go func(userImg *multipart.FileHeader, userID int64, svc *userService) {
+			log.Info("[RegisterSvc] Start UploadImg")
+			startUpload := time.Now()
 
-		url, err := repo.ImageUploadProxy(user.Img, fmt.Sprintf("/prod/user/profile-img/%d", id))
-		if err != nil {
-			log.Error("[UserSvc] Failed to upload user image", "error", err)
-			return err
-		}
+			url, err := repo.ImageUploadProxyRESTY(userImg, fmt.Sprintf("/prod/user/profile-img/%d", userID))
+			if err != nil {
+				log.Error("[UserSvc] Failed to upload user image", "error", err)
+				return
+			}
+			log.Info("[RegisterSvc] End UploadImg", "Total Duration", time.Since(startUpload))
 
-		if err := s.userRepo.UpdateImageURL(id, url); err != nil {
-			log.Error("[UserSvc] Failed to update user image URL", "error", err)
-			return err
-		}
+			log.Info("[RegisterSvc] Start UpdateImg")
+			startUpdate := time.Now()
+			if err := svc.userRepo.UpdateImageURL(userID, url); err != nil {
+				log.Error("[UserSvc] Failed to update user image URL", "error", err)
+				return
+			}
+			log.Info("[RegisterSvc] End UpdateImg", "Total Duration", time.Since(startUpdate))
+		}(user.Img, id, s)
 	}
 
 	return nil
