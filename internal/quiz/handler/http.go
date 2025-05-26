@@ -56,7 +56,8 @@ func (h *QuizHandler) SubmitQuizHandler(c *fiber.Ctx) error {
 	if err := h.val.Struct(req); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", err.Error())
 	}
-	if err := h.quizService.SubmitQuiz(req, setID, userID); err != nil {
+	id, err := h.quizService.SubmitQuiz(req, setID, userID)
+	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
 			appErr = app.ErrInternal
@@ -64,7 +65,7 @@ func (h *QuizHandler) SubmitQuizHandler(c *fiber.Ctx) error {
 		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
 
-	return response.SendSuccess(c, "question added successfully", nil)
+	return response.SendSuccess(c, "question added successfully", id)
 }
 
 func (h *QuizHandler) AdminQuizSubmissionHandler(c *fiber.Ctx) error {

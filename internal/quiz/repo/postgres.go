@@ -13,7 +13,7 @@ import (
 )
 
 type QuizRepository interface {
-	Submit(req quizEntity.QuizSubmit, setId int, userId int) error
+	Submit(req quizEntity.QuizSubmit, setId int, userId int) (int, error)
 	List(filter map[string]string, page, limit, userID int) ([]quizEntity.ListQuizSubmission, error)
 	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	GetLast(userID int) (quizEntity.QuizExp, error)
@@ -152,19 +152,19 @@ func (r *quizRepository) getNextAttemptNo(setID int, userID int) (int, error) {
 	return attemptNo, nil
 }
 
-func (r *quizRepository) Submit(req quizEntity.QuizSubmit, setID int, userID int) error {
+func (r *quizRepository) Submit(req quizEntity.QuizSubmit, setID int, userID int) (int, error) {
 	correctAnswer, err := r.checkCorrectAnswer(setID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	totalQuestions, err := r.checkTotalQuestion(setID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(req.Answers) != totalQuestions {
 		log.Error("[Repo][Submit] Invalid number of answers provided")
-		return app.NewAppError(400, "invalid number of answers provided")
+		return 0, app.NewAppError(400, "invalid number of answers provided")
 	}
 
 	sort.Slice(req.Answers, func(i, j int) bool {
@@ -179,21 +179,22 @@ func (r *quizRepository) Submit(req quizEntity.QuizSubmit, setID int, userID int
 
 	attemptNo, err := r.getNextAttemptNo(setID, userID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	score, correctCount, err := r.checkQuizScore(answerStr, correctAnswer, setID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	query := "INSERT INTO quiz_submissions (answer, correct, grade, attempt_no, set_id, user_id) VALUES ($1, $2, $3, $4, $5, $6)"
-	_, err = r.db.Exec(query, answerStr, correctCount, score, attemptNo, setID, userID)
+	var id int
+	query := "INSERT INTO quiz_submissions (answer, correct, grade, attempt_no, set_id, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
+	err = r.db.QueryRow(query, answerStr, correctCount, score, attemptNo, setID, userID).Scan(&id)
 	if err != nil {
 		log.Error("[Repo][Submit] Error Exec: ", err)
-		return app.NewAppError(500, err.Error())
+		return 0, app.NewAppError(500, err.Error())
 	}
-	return nil
+	return id, nil
 }
 
 type quizRepository struct {
