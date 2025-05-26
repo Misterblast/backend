@@ -47,12 +47,21 @@ func TestUserRepository_Add(t *testing.T) {
 	}
 	isVerified := true
 
-	mock.ExpectExec(`INSERT INTO users \(name, email, password, img_url, is_verified\) VALUES \(\$1, \$2, \$3, \$4, \$5\)`).
-		WithArgs(user.Name, user.Email, sqlmock.AnyArg(), nil, isVerified).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+	// Mock pengecekan apakah user sudah ada
+	mock.ExpectQuery(`SELECT EXISTS\(SELECT 1 FROM users WHERE email=\$1\)`).
+		WithArgs(user.Email).
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 
-	err := repo.Add(user, isVerified)
+	// Mock insert user baru
+	mock.ExpectQuery(`INSERT INTO users \(name, email, password, img_url, is_verified\) VALUES \(\$1, \$2, \$3, \$4, \$5\) RETURNING id`).
+		WithArgs(user.Name, user.Email, sqlmock.AnyArg(), nil, isVerified).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	id, err := repo.Add(user, isVerified)
 	assert.NoError(t, err)
+	assert.Equal(t, int64(1), id)
+
+	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestUserRepository_Check(t *testing.T) {

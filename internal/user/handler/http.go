@@ -36,10 +36,25 @@ func (h *UserHandler) Router(r fiber.Router) {
 }
 
 func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
-	var user entity.Register
 
-	if err := c.BodyParser(&user); err != nil {
-		return response.SendError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	name := c.FormValue("name")
+	email := c.FormValue("email")
+	password := c.FormValue("password")
+
+	if name == "" || email == "" || password == "" {
+		return response.SendError(c, fiber.StatusBadRequest, "Missing required fields", nil)
+	}
+
+	user := entity.RegisterDTO{
+		Name:     name,
+		Email:    email,
+		Password: password,
+	}
+
+	if form, err := c.MultipartForm(); err == nil {
+		if files := form.File["img"]; len(files) > 0 {
+			user.Img = files[0]
+		}
 	}
 
 	if err := h.val.Struct(user); err != nil {

@@ -8,7 +8,7 @@ import (
 )
 
 type UserService interface {
-	Register(user userEntity.Register) error
+	Register(user userEntity.RegisterDTO) error
 	RegisterAdmin(user userEntity.RegisterAdmin) error
 	Login(user userEntity.UserLogin) (*userEntity.LoginResponse, string, error)
 	ListUser(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
@@ -23,7 +23,7 @@ type userService struct {
 }
 
 func NewUserService(userRepo userRepo.UserRepository) UserService {
-	return &userService{userRepo: userRepo}
+	return &userService{userRepo}
 }
 
 func (s *userService) Login(user userEntity.UserLogin) (*userEntity.LoginResponse, string, error) {

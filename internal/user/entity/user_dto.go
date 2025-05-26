@@ -1,14 +1,17 @@
 package entity
 
+import "mime/multipart"
+
 type UserLogin struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6,max=20"`
 }
 
 type Register struct {
-	Name     string `json:"name" validate:"required,min=2,max=20"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6,max=20"`
+	Name     string  `json:"name" validate:"required,min=2,max=20"`
+	Email    string  `json:"email" validate:"required,email"`
+	Password string  `json:"password" validate:"required,min=6,max=20"`
+	ImgUrl   *string `json:"img_url,omitempty"`
 }
 
 type EditUser struct {
@@ -73,4 +76,11 @@ type RegisterAdmin struct {
 type ChangePassword struct {
 	Token    string `json:"token" validate:"required"`
 	Password string `json:"password" validate:"required,min=6,max=20"`
+}
+
+type RegisterDTO struct {
+	Name     string                `form:"name" validate:"required,min=2,max=20"`
+	Email    string                `form:"email" validate:"required,email"`
+	Password string                `form:"password" validate:"required,min=6,max=20"`
+	Img      *multipart.FileHeader `form:"img" validate:"omitempty"`
 }

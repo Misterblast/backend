@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,7 +28,7 @@ type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) Register(user entity.Register) error {
+func (m *MockUserService) Register(user entity.RegisterDTO) error {
 	args := m.Called(user)
 	return args.Error(0)
 }
@@ -84,21 +85,33 @@ func (m *MockUserService) ChangePassword(token string, newPassword string) error
 	args := m.Called(token, newPassword)
 	return args.Error(0)
 }
-
 func TestRegisterHandler(t *testing.T) {
 	app := fiber.New()
 	mockService := new(MockUserService)
 	h := handler.NewUserHandler(mockService, validator.New())
 	app.Post("/register", h.RegisterHandler)
 
-	user := entity.Register{Name: "John Doe", Email: "john@example.com", Password: "password"}
-	mockService.On("Register", user).Return(nil)
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
 
-	body, _ := json.Marshal(user)
-	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req)
+	_ = writer.WriteField("name", "John Doe")
+	_ = writer.WriteField("email", "john@example.com")
+	_ = writer.WriteField("password", "password")
+	writer.Close()
 
+	expected := entity.RegisterDTO{
+		Name:     "John Doe",
+		Email:    "john@example.com",
+		Password: "password",
+	}
+
+	mockService.On("Register", expected).Return(nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/register", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	mockService.AssertExpectations(t)
 }

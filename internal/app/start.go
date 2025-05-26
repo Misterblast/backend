@@ -10,6 +10,7 @@ import (
 )
 
 func Start() {
+
 	db, _ := pg.InitPostgres()
 	defer db.Close()
 

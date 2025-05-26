@@ -34,9 +34,9 @@ func (m *MockUserRepository) AdminActivation(id int32) error {
 	return args.Error(0)
 }
 
-func (m *MockUserRepository) Add(user userEntity.Register, isVerified bool) error {
+func (m *MockUserRepository) Add(user userEntity.Register, isVerified bool) (int64, error) {
 	args := m.Called(user, isVerified)
-	return args.Error(0)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 func (m *MockUserRepository) Check(user userEntity.UserLogin) (*userEntity.UserJWT, error) {
@@ -92,18 +92,28 @@ func (m *MockUserRepository) GenerateToken() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockUserRepository) UpdateImageURL(id int64, url string) error {
+	args := m.Called(id, url)
+	return args.Error(0)
+}
+
 func TestUserService_Register(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	service := userSvc.NewUserService(mockRepo)
 
-	user := userEntity.Register{
+	dto := userEntity.RegisterDTO{
 		Name:     "John Doe",
 		Email:    "john@example.com",
 		Password: "password123",
 	}
 
-	mockRepo.On("Add", user, true).Return(nil)
-	err := service.Register(user)
+	mockRepo.
+		On("Add", mock.MatchedBy(func(input userEntity.Register) bool {
+			return input.Name == dto.Name && input.Email == dto.Email && input.Password == dto.Password
+		}), true).
+		Return(int64(1), nil)
+
+	err := service.Register(dto)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
