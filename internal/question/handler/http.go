@@ -35,8 +35,8 @@ func (h *QuestionHandler) Router(r fiber.Router) {
 	r.Put("/answer/:id", m.R100(), h.EditAnswerHandler)
 	r.Post("/quiz-answer", m.R100(), h.AddQuizAnswerHandler)
 	r.Post("/question-answer", m.R100(), h.AddQuizAnswerHandler)
-	r.Post("/quiz-answer-bulk", m.R100(), h.AddQuizAnswerBulkHandler)
-	r.Post("/question-answer-bulk", m.R100(), h.AddQuizAnswerBulkHandler)
+	r.Post("/quiz-answer-bulk/:id", m.R100(), h.AddQuizAnswerBulkHandler)
+	r.Post("/question-answer-bulk/:id", m.R100(), h.AddQuizAnswerBulkHandler)
 
 	// quiz
 	r.Get("/quiz", m.R100(), h.ListQuizHandler)
@@ -140,28 +140,12 @@ func (h *QuestionHandler) DeleteQuestionHandler(c *fiber.Ctx) error {
 // Quiz Answer
 
 func (h *QuestionHandler) AddQuizAnswerHandler(c *fiber.Ctx) error {
-	var answer entity.SetAnswer
-
-	if err := c.BodyParser(&answer); err != nil {
-		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
-	}
-
-	if err := h.val.Struct(answer); err != nil {
-		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", err.Error())
-	}
-	if err := h.questionService.AddQuizAnswer(answer); err != nil {
-		appErr, ok := err.(*app.AppError)
-		if !ok {
-			appErr = app.ErrInternal
-		}
-		return response.SendError(c, appErr.Code, appErr.Message, nil)
-	}
-
-	return response.SendSuccess(c, "answer added successfully", nil)
-}
-
-func (h *QuestionHandler) AddQuizAnswerBulkHandler(c *fiber.Ctx) error {
 	var answers []entity.SetAnswer
+
+	questionID, err := c.ParamsInt("id")
+	if err != nil || questionID <= 0 {
+		return response.SendError(c, fiber.StatusBadRequest, "invalid question ID", nil)
+	}
 	if err := c.BodyParser(&answers); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
 	}
@@ -173,7 +157,35 @@ func (h *QuestionHandler) AddQuizAnswerBulkHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	if err := h.questionService.AddQuizAnswerBulk(answers); err != nil {
+	if err := h.questionService.AddQuizAnswerBulk(int32(questionID), answers); err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+	return response.SendSuccess(c, "answers added successfully", nil)
+}
+
+func (h *QuestionHandler) AddQuizAnswerBulkHandler(c *fiber.Ctx) error {
+	var answers []entity.SetAnswer
+
+	questionID, err := c.ParamsInt("id")
+	if err != nil || questionID <= 0 {
+		return response.SendError(c, fiber.StatusBadRequest, "invalid question ID", nil)
+	}
+	if err := c.BodyParser(&answers); err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
+	}
+	for i, ans := range answers {
+		if err := h.val.Struct(ans); err != nil {
+			return response.SendError(c, fiber.StatusBadRequest,
+				fmt.Sprintf("Validation failed at index %d", i),
+				err.Error())
+		}
+	}
+
+	if err := h.questionService.AddQuizAnswerBulk(int32(questionID), answers); err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
 			appErr = app.ErrInternal

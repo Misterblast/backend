@@ -22,7 +22,7 @@ type QuestionService interface {
 	AddQuizAnswer(answer questionEntity.SetAnswer) error
 	DeleteAnswer(id int32) error
 	EditQuizAnswer(id int32, answer questionEntity.EditAnswer) error
-	AddQuizAnswerBulk(answers []questionEntity.SetAnswer) error
+	AddQuizAnswerBulk(questionID int32, answers []questionEntity.SetAnswer) error
 
 	// Admin
 	ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error)
@@ -42,11 +42,11 @@ func (s *questionService) AddQuizAnswer(answer questionEntity.SetAnswer) error {
 	return s.repo.AddQuizAnswer(answer)
 }
 
-func (s *questionService) AddQuizAnswerBulk(answers []questionEntity.SetAnswer) error {
+func (s *questionService) AddQuizAnswerBulk(questionID int32, answers []questionEntity.SetAnswer) error {
 	if len(answers) == 0 {
 		return nil
 	}
-	return s.repo.AddQuizAnswerBulk(answers)
+	return s.repo.UpsertAndSyncAnswers(questionID, answers)
 }
 
 func (s *questionService) EditQuizAnswer(id int32, question questionEntity.EditAnswer) error {

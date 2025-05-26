@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"strings"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
@@ -22,36 +21,6 @@ func (r *questionRepository) AddQuizAnswer(answer questionEntity.SetAnswer) erro
 	if err != nil {
 		log.Error("[Repo][AddQuizAnswer] Error inserting answer: ", err)
 		return app.NewAppError(500, "failed to insert quiz answer")
-	}
-
-	return nil
-}
-
-func (r *questionRepository) AddQuizAnswerBulk(answers []questionEntity.SetAnswer) error {
-	if len(answers) == 0 {
-		return nil
-	}
-
-	query := `
-		INSERT INTO answers (question_id, code, content, img_url, is_answer) VALUES 
-	`
-
-	valueArgs := []interface{}{}
-	placeholders := []string{}
-
-	for i, answer := range answers {
-		start := i * 5
-		placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
-			start+1, start+2, start+3, start+4, start+5))
-		valueArgs = append(valueArgs, answer.QuestionID, answer.Code, answer.Content, answer.ImgURL, answer.IsAnswer)
-	}
-
-	query += strings.Join(placeholders, ", ")
-
-	_, err := r.db.Exec(query, valueArgs...)
-	if err != nil {
-		log.Error("[Repo][AddQuizAnswerBulk] Error bulk inserting answers: ", err)
-		return app.NewAppError(500, "failed to bulk insert quiz answers")
 	}
 
 	return nil

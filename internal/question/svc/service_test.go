@@ -81,7 +81,7 @@ func (m *MockQuestionRepo) ListQuestionTypes(ctx context.Context) ([]questionEnt
 	return args.Get(0).([]questionEntity.QuestionType), args.Error(1)
 }
 
-func (m *MockQuestionRepo) AddQuizAnswerBulk(answers []questionEntity.SetAnswer) error {
+func (m *MockQuestionRepo) UpsertAndSyncAnswers(questionID int32, answers []questionEntity.SetAnswer) error {
 	args := m.Called(answers)
 	return args.Error(0)
 }

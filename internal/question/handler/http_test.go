@@ -52,7 +52,7 @@ func (m *MockQuestionService) AddQuizAnswer(answer questionEntity.SetAnswer) err
 	return args.Error(0)
 }
 
-func (m *MockQuestionService) AddQuizAnswerBulk(answers []questionEntity.SetAnswer) error {
+func (m *MockQuestionService) AddQuizAnswerBulk(questionID int32, answers []questionEntity.SetAnswer) error {
 	args := m.Called(answers)
 	return args.Error(0)
 }
