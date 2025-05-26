@@ -83,6 +83,12 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 		argCounter++
 	}
 
+	if code, exists := filter["code"]; exists {
+		whereClause += fmt.Sprintf(" AND l.code ILIKE $%d", argCounter)
+		args = append(args, "%"+code+"%")
+		argCounter++
+	}
+
 	countQuery := "SELECT COUNT(*) " + baseQuery + whereClause
 	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
 		log.Error("[Repo][ListAdmin] Error Count Query:", err)

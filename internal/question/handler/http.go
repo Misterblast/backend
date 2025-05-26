@@ -270,6 +270,9 @@ func (h *QuestionHandler) ListQuestionAdminHandler(c *fiber.Ctx) error {
 	if c.Query("search") != "" {
 		filter["search"] = c.Query("search")
 	}
+	if c.Query("lessonCode") != "" {
+		filter["code"] = c.Query("lessonCode")
+	}
 	lang := c.Get("Lang")
 	if lang == "" {
 		lang = "id"
