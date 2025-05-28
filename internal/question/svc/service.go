@@ -43,9 +43,6 @@ func (s *questionService) AddQuizAnswer(answer questionEntity.SetAnswer) error {
 }
 
 func (s *questionService) AddQuizAnswerBulk(questionID int32, answers []questionEntity.SetAnswer) error {
-	if len(answers) == 0 {
-		return nil
-	}
 	return s.repo.UpsertAndSyncAnswers(questionID, answers)
 }
 
