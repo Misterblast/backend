@@ -140,24 +140,13 @@ func (h *QuestionHandler) DeleteQuestionHandler(c *fiber.Ctx) error {
 // Quiz Answer
 
 func (h *QuestionHandler) AddQuizAnswerHandler(c *fiber.Ctx) error {
-	var answers []entity.SetAnswer
+	var answers entity.SetAnswer
 
-	questionID, err := c.ParamsInt("id")
-	if err != nil || questionID <= 0 {
-		return response.SendError(c, fiber.StatusBadRequest, "invalid question ID", nil)
-	}
 	if err := c.BodyParser(&answers); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
 	}
-	for i, ans := range answers {
-		if err := h.val.Struct(ans); err != nil {
-			return response.SendError(c, fiber.StatusBadRequest,
-				fmt.Sprintf("Validation failed at index %d", i),
-				err.Error())
-		}
-	}
 
-	if err := h.questionService.AddQuizAnswerBulk(int32(questionID), answers); err != nil {
+	if err := h.questionService.AddQuizAnswer(answers); err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
 			appErr = app.ErrInternal

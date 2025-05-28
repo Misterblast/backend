@@ -55,7 +55,6 @@ func (s *userService) Register(user userEntity.RegisterDTO) error {
 			log.Info("[RegisterSvc] End UpdateImg", "Total Duration", time.Since(startUpdate))
 		}(user.Img, id, s)
 	}
-
 	return nil
 }
 
