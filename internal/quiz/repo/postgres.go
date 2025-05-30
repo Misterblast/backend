@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	quizEntity "github.com/ghulammuzz/misterblast/internal/quiz/entity"
@@ -14,50 +15,78 @@ import (
 
 type QuizRepository interface {
 	Submit(req quizEntity.QuizSubmit, setId int, userId int) (int, error)
-	List(filter map[string]string, page, limit, userID int) ([]quizEntity.ListQuizSubmission, error)
+	List(filter map[string]string, userID int) (*response.PaginateResponse, error)
 	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	GetLast(userID int) (quizEntity.QuizExp, error)
 }
 
-func (r *quizRepository) List(filter map[string]string, page, limit, userID int) ([]quizEntity.ListQuizSubmission, error) {
-	query := `
-		SELECT s.id, s.set_id, s.correct, s.grade, s.submitted_at,
-			   l.name AS lesson_name, c.name AS class_name
+func (r *quizRepository) List(filter map[string]string, userID int) (*response.PaginateResponse, error) {
+	page := 1
+	limit := 10
+
+	if val, ok := filter["page"]; ok {
+		if p, err := strconv.Atoi(val); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if val, ok := filter["limit"]; ok {
+		if l, err := strconv.Atoi(val); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	baseQuery := `
 		FROM quiz_submissions s
 		JOIN sets a ON s.set_id = a.id
 		JOIN lessons l ON a.lesson_id = l.id
-		JOIN classes c ON a.class_id = c.id  
+		JOIN classes c ON a.class_id = c.id
 		WHERE s.user_id = $1
 	`
 
 	args := []interface{}{userID}
 	argCounter := 2
 
-	if lesson, exists := filter["lesson"]; exists {
-		query += fmt.Sprintf(" AND l.name = $%d", argCounter)
+	if lesson, exists := filter["lesson_id"]; exists {
+		baseQuery += fmt.Sprintf(" AND l.id = $%d", argCounter)
 		args = append(args, lesson)
 		argCounter++
 	}
-	if class, exists := filter["class"]; exists {
-		query += fmt.Sprintf(" AND c.name = $%d", argCounter)
+	if class, exists := filter["class_id"]; exists {
+		baseQuery += fmt.Sprintf(" AND c.id = $%d", argCounter)
 		args = append(args, class)
 		argCounter++
 	}
 
-	query += " ORDER BY s.submitted_at DESC"
+	// Hitung total data
+	countQuery := "SELECT COUNT(*) " + baseQuery
+	var total int64
+	err := r.db.QueryRow(countQuery, args...).Scan(&total)
+	if err != nil {
+		log.Error("[Repo][List] Error Count Query: ", err)
+		return nil, app.NewAppError(500, "failed to count quiz submissions")
+	}
 
+	// Query utama untuk data
+	mainQuery := `
+		SELECT s.id, s.set_id, s.correct, s.grade, s.submitted_at,
+			   l.name AS lesson_name, c.name AS class_name
+	` + baseQuery + " ORDER BY s.submitted_at DESC"
+
+	mainArgs := append([]interface{}{}, args...)
+
+	// Tambahkan LIMIT dan OFFSET
 	if limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argCounter)
-		args = append(args, limit)
+		mainQuery += fmt.Sprintf(" LIMIT $%d", argCounter)
+		mainArgs = append(mainArgs, limit)
 		argCounter++
 	}
 	if page > 0 && limit > 0 {
 		offset := (page - 1) * limit
-		query += fmt.Sprintf(" OFFSET $%d", argCounter)
-		args = append(args, offset)
+		mainQuery += fmt.Sprintf(" OFFSET $%d", argCounter)
+		mainArgs = append(mainArgs, offset)
 	}
 
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(mainQuery, mainArgs...)
 	if err != nil {
 		log.Error("[Repo][List] Error Query: ", err)
 		return nil, app.NewAppError(500, "failed to fetch quiz submissions")
@@ -67,7 +96,11 @@ func (r *quizRepository) List(filter map[string]string, page, limit, userID int)
 	var submissions []quizEntity.ListQuizSubmission
 	for rows.Next() {
 		var submission quizEntity.ListQuizSubmission
-		err := rows.Scan(&submission.ID, &submission.SetID, &submission.Correct, &submission.Grade, &submission.SubmittedAt, &submission.Lesson, &submission.Class)
+		err := rows.Scan(
+			&submission.ID, &submission.SetID, &submission.Correct,
+			&submission.Grade, &submission.SubmittedAt,
+			&submission.Lesson, &submission.Class,
+		)
 		if err != nil {
 			log.Error("[Repo][List] Error Scan: ", err)
 			return nil, app.NewAppError(500, "failed to scan quiz submissions")
@@ -80,7 +113,14 @@ func (r *quizRepository) List(filter map[string]string, page, limit, userID int)
 		return nil, app.NewAppError(500, "error while iterating quiz submissions")
 	}
 
-	return submissions, nil
+	paginateResp := &response.PaginateResponse{
+		Total: total,
+		Page:  page,
+		Limit: limit,
+		Data:  submissions,
+	}
+
+	return paginateResp, nil
 }
 
 func (r *quizRepository) checkTotalQuestion(setID int) (int, error) {

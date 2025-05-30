@@ -191,6 +191,8 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		}
 	}
 
+	log.Debug("[Repo][ListQuizQuestions] Filter: ", filter)
+
 	redisKey := fmt.Sprintf("quiz:list:%s:%s:%s", setID, filter["type"], filter["number"])
 	if r.redis != nil {
 		if cached, err := cache.Get(ctx, redisKey, r.redis); err == nil && cached != "" {
@@ -203,12 +205,12 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 
 	query := `
 		SELECT q.id, q.number, q.type, q.format, q.content, q.set_id,
-			   COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 
-			   COALESCE(a.content, '') AS answer_content, COALESCE(a.img_url, '') AS img_url
+		COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 
+		COALESCE(a.content, '') AS answer_content, COALESCE(a.img_url, '') AS img_url
 		FROM questions q
 		LEFT JOIN answers a ON q.id = a.question_id
 		WHERE q.is_quiz = true AND q.set_id = $1
-	`
+		`
 	args := []interface{}{setID}
 	argCounter := 2
 
@@ -291,6 +293,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
 		}
 	}
+	log.Debug("[Repo][ListQuizQuestions] Using set_id: ", setID)
 
 	return finalQuestions, nil
 }

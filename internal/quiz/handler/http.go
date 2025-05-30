@@ -106,17 +106,25 @@ func (h *QuizHandler) QuizSubmissionHandler(c *fiber.Ctx) error {
 
 	filter := map[string]string{}
 
-	if c.Query("class") != "" {
-		filter["class"] = c.Query("class")
+	if c.Query("class_id") != "" {
+		filter["class_id"] = c.Query("class")
 	}
-	if c.Query("lesson") != "" {
-		filter["lesson"] = c.Query("lesson")
+	if c.Query("lesson_id") != "" {
+		filter["lesson_id"] = c.Query("lesson")
 	}
 
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 10)
+	if c.Query("page") != "" {
+		filter["page"] = c.Query("page")
+	} else {
+		filter["page"] = "1"
+	}
+	if c.Query("limit") != "" {
+		filter["limit"] = c.Query("limit")
+	} else {
+		filter["limit"] = "10"
+	}
 
-	quiz, err := h.quizService.List(filter, page, limit, userID)
+	quiz, err := h.quizService.List(filter, userID)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

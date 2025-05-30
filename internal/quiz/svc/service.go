@@ -9,7 +9,7 @@ import (
 type QuizService interface {
 	SubmitQuiz(req quizEntity.QuizSubmit, setID int, userID int) (int, error)
 	ListAdmin(filter map[string]string, page int, limit int) (*response.PaginateResponse, error)
-	List(filter map[string]string, page int, limit int, userID int) ([]quizEntity.ListQuizSubmission, error)
+	List(filter map[string]string, userID int) (*response.PaginateResponse, error)
 	GetResult(userID int) (quizEntity.QuizExp, error)
 }
 
@@ -33,6 +33,6 @@ func (s *quizService) ListAdmin(filter map[string]string, page int, limit int) (
 	return s.repo.ListAdmin(filter, page, limit)
 }
 
-func (s *quizService) List(filter map[string]string, page int, limit int, userID int) ([]quizEntity.ListQuizSubmission, error) {
-	return s.repo.List(filter, page, limit, userID)
+func (s *quizService) List(filter map[string]string, userID int) (*response.PaginateResponse, error) {
+	return s.repo.List(filter, userID)
 }

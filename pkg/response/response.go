@@ -5,14 +5,14 @@ import (
 )
 
 type PaginateResponse struct {
-	Total int64       `json:"total"`
-	Page  int         `json:"page"`
-	Limit int         `json:"limit"`
-	Data  interface{} `json:"data"`
+	Total int64 `json:"total"`
+	Page  int   `json:"page"`
+	Limit int   `json:"limit"`
+	Data  any   `json:"data"`
 }
 type Response struct {
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
 }
 
 func SendResponse(c *fiber.Ctx, statusCode int, message string, data interface{}) error {
