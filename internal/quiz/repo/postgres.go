@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ghulammuzz/misterblast/helper"
 	quizEntity "github.com/ghulammuzz/misterblast/internal/quiz/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	log "github.com/ghulammuzz/misterblast/pkg/middleware"
@@ -57,7 +58,6 @@ func (r *quizRepository) List(filter map[string]string, userID int) (*response.P
 		argCounter++
 	}
 
-	// Hitung total data
 	countQuery := "SELECT COUNT(*) " + baseQuery
 	var total int64
 	err := r.db.QueryRow(countQuery, args...).Scan(&total)
@@ -66,7 +66,6 @@ func (r *quizRepository) List(filter map[string]string, userID int) (*response.P
 		return nil, app.NewAppError(500, "failed to count quiz submissions")
 	}
 
-	// Query utama untuk data
 	mainQuery := `
 		SELECT s.id, s.set_id, s.correct, s.grade, s.submitted_at,
 			   l.name AS lesson_name, c.name AS class_name
@@ -74,7 +73,6 @@ func (r *quizRepository) List(filter map[string]string, userID int) (*response.P
 
 	mainArgs := append([]interface{}{}, args...)
 
-	// Tambahkan LIMIT dan OFFSET
 	if limit > 0 {
 		mainQuery += fmt.Sprintf(" LIMIT $%d", argCounter)
 		mainArgs = append(mainArgs, limit)
@@ -105,6 +103,7 @@ func (r *quizRepository) List(filter map[string]string, userID int) (*response.P
 			log.Error("[Repo][List] Error Scan: ", err)
 			return nil, app.NewAppError(500, "failed to scan quiz submissions")
 		}
+		submission.SubmittedAt = helper.FormatUnixTime(submission.SubmittedAt)
 		submissions = append(submissions, submission)
 	}
 

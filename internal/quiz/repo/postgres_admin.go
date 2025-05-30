@@ -3,6 +3,7 @@ package repo
 import (
 	"fmt"
 
+	"github.com/ghulammuzz/misterblast/helper"
 	quizEntity "github.com/ghulammuzz/misterblast/internal/quiz/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	log "github.com/ghulammuzz/misterblast/pkg/middleware"
@@ -95,6 +96,7 @@ func (r *quizRepository) ListAdmin(filter map[string]string, page, limit int) (*
 			log.Error("[Repo][ListAdmin] Error Scan: ", err)
 			return nil, app.NewAppError(500, "failed to scan quiz submissions")
 		}
+		submission.SubmittedAt = helper.FormatUnixTime(submission.SubmittedAt)
 		submissions = append(submissions, submission)
 	}
 
