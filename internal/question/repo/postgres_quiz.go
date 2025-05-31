@@ -172,26 +172,44 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		setID = val
 	} else {
 		lessonID, hasLesson := filter["lesson_id"]
-		classID, hasClass := filter["class_id"]
 
-		if !hasLesson || !hasClass {
-			return nil, app.NewAppError(400, "lesson_id and class_id are required if set_id is not provided")
+		if !hasLesson {
+			return nil, app.NewAppError(400, "lesson_id is required if set_id is not provided")
 		}
 
+		// ambil class_id secara random dari sets berdasarkan lesson_id
+		var classID string
+		queryClass := `
+			SELECT class_id FROM (
+				SELECT class_id FROM sets 
+				WHERE is_quiz = true AND lesson_id = $1 
+				GROUP BY class_id
+				ORDER BY RANDOM()
+				LIMIT 1
+			) AS random_class
+		`
+
+		err := r.db.QueryRowContext(ctx, queryClass, lessonID).Scan(&classID)
+		if err != nil {
+			log.Error("[Repo][ListQuizQuestions] Failed to get random class_id: ", err)
+			return nil, app.NewAppError(404, "no class found for specified lesson")
+		}
+
+		// gunakan lesson_id dan class_id untuk ambil set_id secara random
 		querySet := `
 			SELECT id FROM sets
 			WHERE is_quiz = true AND lesson_id = $1 AND class_id = $2
 			ORDER BY RANDOM()
 			LIMIT 1
 		`
-		err := r.db.QueryRowContext(ctx, querySet, lessonID, classID).Scan(&setID)
+		err = r.db.QueryRowContext(ctx, querySet, lessonID, classID).Scan(&setID)
 		if err != nil {
 			log.Error("[Repo][ListQuizQuestions] Failed to get random set_id: ", err)
 			return nil, app.NewAppError(404, "no quiz set found for specified lesson and class")
 		}
 	}
 
-	log.Debug("[Repo][ListQuizQuestions] Filter: ", filter)
+	log.Debug("[Repo][ListQuizQuestions] Using set_id: ", setID)
 
 	redisKey := fmt.Sprintf("quiz:list:%s:%s:%s", setID, filter["type"], filter["number"])
 	if r.redis != nil {
@@ -203,14 +221,15 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		}
 	}
 
+	// query utama ambil question dan answers
 	query := `
 		SELECT q.id, q.number, q.type, q.format, q.content, q.set_id,
-		COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 
-		COALESCE(a.content, '') AS answer_content, COALESCE(a.img_url, '') AS img_url
+			   COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 
+			   COALESCE(a.content, '') AS answer_content, COALESCE(a.img_url, '') AS img_url
 		FROM questions q
 		LEFT JOIN answers a ON q.id = a.question_id
 		WHERE q.is_quiz = true AND q.set_id = $1
-		`
+	`
 	args := []interface{}{setID}
 	argCounter := 2
 
@@ -293,7 +312,6 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
 		}
 	}
-	log.Debug("[Repo][ListQuizQuestions] Using set_id: ", setID)
 
 	return finalQuestions, nil
 }
