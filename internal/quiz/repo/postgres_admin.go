@@ -27,15 +27,22 @@ func (r *quizRepository) ListAdmin(filter map[string]string, page, limit int) (*
 	args := []interface{}{}
 	argCounter := 1
 
-	if lesson, exists := filter["lesson"]; exists {
-		query += fmt.Sprintf(" AND l.name = $%d", argCounter)
+	if lesson, exists := filter["lesson_id"]; exists {
+		query += fmt.Sprintf(" AND l.id = $%d", argCounter)
 		args = append(args, lesson)
 		argCounter++
 	}
-	if class, exists := filter["class"]; exists {
-		query += fmt.Sprintf(" AND c.name = $%d", argCounter)
+	if class, exists := filter["class_id"]; exists {
+		query += fmt.Sprintf(" AND c.id = $%d", argCounter)
 		args = append(args, class)
 		argCounter++
+	}
+	if submissionType, exists := filter["type"]; exists {
+		if submissionType == "this_week" {
+			query += " AND s.submitted_at >= EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')"
+		} else if submissionType == "old" {
+			query += " AND s.submitted_at < EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')"
+		}
 	}
 
 	query += " ORDER BY s.submitted_at DESC"
@@ -51,6 +58,7 @@ func (r *quizRepository) ListAdmin(filter map[string]string, page, limit int) (*
 		args = append(args, offset)
 	}
 
+	// === Count Query ===
 	countQuery := `
 		SELECT COUNT(*) 
 		FROM quiz_submissions s
@@ -63,15 +71,22 @@ func (r *quizRepository) ListAdmin(filter map[string]string, page, limit int) (*
 	countArgs := []interface{}{}
 	countArgCounter := 1
 
-	if lesson, exists := filter["lesson"]; exists {
-		countQuery += fmt.Sprintf(" AND l.name = $%d", countArgCounter)
+	if lesson, exists := filter["lesson_id"]; exists {
+		countQuery += fmt.Sprintf(" AND l.id = $%d", countArgCounter)
 		countArgs = append(countArgs, lesson)
 		countArgCounter++
 	}
-	if class, exists := filter["class"]; exists {
-		countQuery += fmt.Sprintf(" AND c.name = $%d", countArgCounter)
+	if class, exists := filter["class_id"]; exists {
+		countQuery += fmt.Sprintf(" AND c.id = $%d", countArgCounter)
 		countArgs = append(countArgs, class)
 		countArgCounter++
+	}
+	if submissionType, exists := filter["type"]; exists {
+		if submissionType == "this_week" {
+			countQuery += " AND s.submitted_at >= EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')"
+		} else if submissionType == "old" {
+			countQuery += " AND s.submitted_at < EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')"
+		}
 	}
 
 	var total int64
@@ -91,7 +106,11 @@ func (r *quizRepository) ListAdmin(filter map[string]string, page, limit int) (*
 	var submissions []quizEntity.ListQuizSubmissionAdmin
 	for rows.Next() {
 		var submission quizEntity.ListQuizSubmissionAdmin
-		err := rows.Scan(&submission.ID, &submission.SetID, &submission.Correct, &submission.Grade, &submission.SubmittedAt, &submission.Name, &submission.Lesson, &submission.Class)
+		err := rows.Scan(
+			&submission.ID, &submission.SetID, &submission.Correct,
+			&submission.Grade, &submission.SubmittedAt,
+			&submission.Name, &submission.Lesson, &submission.Class,
+		)
 		if err != nil {
 			log.Error("[Repo][ListAdmin] Error Scan: ", err)
 			return nil, app.NewAppError(500, "failed to scan quiz submissions")

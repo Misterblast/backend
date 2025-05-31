@@ -71,11 +71,15 @@ func (h *QuizHandler) SubmitQuizHandler(c *fiber.Ctx) error {
 func (h *QuizHandler) AdminQuizSubmissionHandler(c *fiber.Ctx) error {
 	filter := map[string]string{}
 
-	if c.Query("class") != "" {
-		filter["class"] = c.Query("class")
+	if c.Query("class_id") != "" {
+		filter["class_id"] = c.Query("class_id")
 	}
-	if c.Query("lesson") != "" {
-		filter["lesson"] = c.Query("lesson")
+	if c.Query("lesson_id") != "" {
+		filter["lesson_id"] = c.Query("lesson_id")
+	}
+
+	if c.Query("type") != "" {
+		filter["type"] = c.Query("type")
 	}
 
 	page := c.QueryInt("page", 1)
@@ -112,6 +116,9 @@ func (h *QuizHandler) QuizSubmissionHandler(c *fiber.Ctx) error {
 	if c.Query("lesson_id") != "" {
 		filter["lesson_id"] = c.Query("lesson")
 	}
+	if c.Query("type") != "" {
+		filter["type"] = c.Query("type")
+	}
 
 	if c.Query("page") != "" {
 		filter["page"] = c.Query("page")
@@ -123,7 +130,6 @@ func (h *QuizHandler) QuizSubmissionHandler(c *fiber.Ctx) error {
 	} else {
 		filter["limit"] = "10"
 	}
-
 	quiz, err := h.quizService.List(filter, userID)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)

@@ -177,7 +177,6 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 			return nil, app.NewAppError(400, "lesson_id is required if set_id is not provided")
 		}
 
-		// ambil class_id secara random dari sets berdasarkan lesson_id
 		var classID string
 		queryClass := `
 			SELECT class_id FROM (
@@ -195,7 +194,6 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 			return nil, app.NewAppError(404, "no class found for specified lesson")
 		}
 
-		// gunakan lesson_id dan class_id untuk ambil set_id secara random
 		querySet := `
 			SELECT id FROM sets
 			WHERE is_quiz = true AND lesson_id = $1 AND class_id = $2
@@ -221,7 +219,6 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		}
 	}
 
-	// query utama ambil question dan answers
 	query := `
 		SELECT q.id, q.number, q.type, q.format, q.content, q.set_id,
 			   COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 

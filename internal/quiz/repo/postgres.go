@@ -42,8 +42,15 @@ func (r *quizRepository) List(filter map[string]string, userID int) (*response.P
 		JOIN lessons l ON a.lesson_id = l.id
 		JOIN classes c ON a.class_id = c.id
 		WHERE s.user_id = $1
-	`
+		`
 
+	if submissionType, exists := filter["type"]; exists {
+		if submissionType == "this_week" {
+			baseQuery += " AND s.submitted_at >= EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')"
+		} else if submissionType == "old" {
+			baseQuery += " AND s.submitted_at < EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')"
+		}
+	}
 	args := []interface{}{userID}
 	argCounter := 2
 
