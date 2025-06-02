@@ -75,3 +75,8 @@ type QuestionType struct {
 	EnglishName    string `json:"eng_name"`
 	Code           string `json:"code"`
 }
+
+type SetIDListQuizResponse struct {
+	SetID     int                `json:"set_id"`
+	Questions []ListQuestionQuiz `json:"questions"`
+}

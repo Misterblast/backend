@@ -57,9 +57,9 @@ func (m *MockQuestionService) AddQuizAnswerBulk(questionID int32, answers []ques
 	return args.Error(0)
 }
 
-func (m *MockQuestionService) ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
+func (m *MockQuestionService) ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, int, error) {
 	args := m.Called(ctx, filter)
-	return args.Get(0).([]questionEntity.ListQuestionQuiz), args.Error(1)
+	return args.Get(0).([]questionEntity.ListQuestionQuiz), args.Int(1), args.Error(1)
 }
 
 func (m *MockQuestionService) ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error) {

@@ -229,7 +229,7 @@ func (h *QuestionHandler) ListQuizHandler(c *fiber.Ctx) error {
 	}
 	filter["lang"] = lang
 
-	questions, err := h.questionService.ListQuizQuestions(c.Context(), filter)
+	questions, setID, err := h.questionService.ListQuizQuestions(c.Context(), filter)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {
@@ -238,7 +238,12 @@ func (h *QuestionHandler) ListQuizHandler(c *fiber.Ctx) error {
 		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
 
-	return response.SendSuccess(c, "questions retrieved successfully", questions)
+	responseData := entity.SetIDListQuizResponse{
+		SetID:     setID,
+		Questions: questions,
+	}
+
+	return response.SendSuccess(c, "questions retrieved successfully", responseData)
 }
 
 // admin

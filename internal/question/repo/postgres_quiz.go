@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
@@ -165,7 +166,7 @@ func (r *questionRepository) EditAnswer(id int32, answer questionEntity.EditAnsw
 	return nil
 }
 
-func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
+func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, int, error) {
 	var setID string
 
 	if val, ok := filter["set_id"]; ok && val != "" {
@@ -174,7 +175,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		lessonID, hasLesson := filter["lesson_id"]
 
 		if !hasLesson {
-			return nil, app.NewAppError(400, "lesson_id is required if set_id is not provided")
+			return nil, 0, app.NewAppError(400, "lesson_id is required if set_id is not provided")
 		}
 
 		var classID string
@@ -191,7 +192,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		err := r.db.QueryRowContext(ctx, queryClass, lessonID).Scan(&classID)
 		if err != nil {
 			log.Error("[Repo][ListQuizQuestions] Failed to get random class_id: ", err)
-			return nil, app.NewAppError(404, "no class found for specified lesson")
+			return nil, 0, app.NewAppError(404, "no class found for specified lesson")
 		}
 
 		querySet := `
@@ -203,7 +204,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		err = r.db.QueryRowContext(ctx, querySet, lessonID, classID).Scan(&setID)
 		if err != nil {
 			log.Error("[Repo][ListQuizQuestions] Failed to get random set_id: ", err)
-			return nil, app.NewAppError(404, "no quiz set found for specified lesson and class")
+			return nil, 0, app.NewAppError(404, "no quiz set found for specified lesson and class")
 		}
 	}
 
@@ -214,7 +215,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		if cached, err := cache.Get(ctx, redisKey, r.redis); err == nil && cached != "" {
 			var cachedData []questionEntity.ListQuestionQuiz
 			if err := json.Unmarshal([]byte(cached), &cachedData); err == nil {
-				return cachedData, nil
+				return cachedData, 0, nil
 			}
 		}
 	}
@@ -251,7 +252,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		log.Error("[Repo][ListQuizQuestions] Error Query: ", err)
-		return nil, app.NewAppError(500, "failed to fetch quiz questions")
+		return nil, 0, app.NewAppError(500, "failed to fetch quiz questions")
 	}
 	defer rows.Close()
 
@@ -266,7 +267,7 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		err := rows.Scan(&qID, &number, &qType, &qFormat, &content, &setIDInt, &aID, &code, &aContent, &imgURL)
 		if err != nil {
 			log.Error("[Repo][ListQuizQuestions] Error Scan: ", err)
-			return nil, app.NewAppError(500, "failed to scan quiz questions")
+			return nil, 0, app.NewAppError(500, "failed to scan quiz questions")
 		}
 
 		if _, exists := questionsMap[qID]; !exists {
@@ -310,5 +311,12 @@ func (r *questionRepository) ListQuizQuestionsLessonClass(ctx context.Context, f
 		}
 	}
 
-	return finalQuestions, nil
+	// convert string to int setID
+	setIDInt, err := strconv.Atoi(setID)
+	if err != nil {
+		log.Error("[Repo][ListQuizQuestions] Error converting setID to int: ", err)
+		return nil, 0, app.NewAppError(500, "failed to convert set_id to integer")
+	}
+
+	return finalQuestions, setIDInt, nil
 }
