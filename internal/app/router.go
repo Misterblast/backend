@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	class "github.com/ghulammuzz/misterblast/internal/class/di"
+	content "github.com/ghulammuzz/misterblast/internal/content/di"
 	email "github.com/ghulammuzz/misterblast/internal/email/di"
 	lesson "github.com/ghulammuzz/misterblast/internal/lesson/di"
 	question "github.com/ghulammuzz/misterblast/internal/question/di"
@@ -37,6 +38,7 @@ func SetupRouter(db *sql.DB, redis *redis.Client) *fiber.App {
 	email.InitializedEmailService(db, m.Validate).Router(api)
 	quiz.InitializedQuizService(db, m.Validate).Router(api)
 	task.InitializeTaskService(db, m.Validate).Router(api)
+	content.InitializedContentService(db, redis, m.Validate).Router(api)
 
 	app.Get("/routes", func(c *fiber.Ctx) error {
 		routes := app.Stack()
