@@ -26,7 +26,7 @@ func (h *QuizHandler) Router(r fiber.Router) {
 
 	r.Get("/quiz-submission-admin", m.R100(), h.AdminQuizSubmissionHandler)
 	r.Get("/quiz-submission", m.JWTProtected(), m.R100(), h.QuizSubmissionHandler)
-
+	r.Get("/quiz-submission/:submission_id", m.JWTProtected(), m.R100(), h.GetSubmissionDetailHandler)
 	r.Get("/quiz-result", m.JWTProtected(), m.R100(), h.GetResultHandler)
 
 }
@@ -163,4 +163,21 @@ func (h *QuizHandler) GetResultHandler(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "quiz result retrieved successfully", quiz)
+}
+
+func (h *QuizHandler) GetSubmissionDetailHandler(c *fiber.Ctx) error {
+	submissionId, err := c.ParamsInt("submission_id")
+	if err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid submission ID", nil)
+	}
+	submission, err := h.quizService.GetSubmissionResult(submissionId)
+	if err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "quiz submission detail retrieved successfully", submission)
 }

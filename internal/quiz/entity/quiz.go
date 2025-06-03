@@ -16,7 +16,7 @@ type ListQuizSubmission struct {
 	Grade       int    `json:"grade"`
 	Lesson      string `json:"lesson"`
 	Class       string `json:"class"`
-	SubmittedAt string  `json:"submitted_at"`
+	SubmittedAt string `json:"submitted_at"`
 }
 
 type ListQuizSubmissionAdmin struct {
@@ -27,7 +27,7 @@ type ListQuizSubmissionAdmin struct {
 	Grade       int    `json:"grade"`
 	Lesson      string `json:"lesson"`
 	Class       string `json:"class"`
-	SubmittedAt string  `json:"submitted_at"`
+	SubmittedAt string `json:"submitted_at"`
 }
 
 type QuizExp struct {

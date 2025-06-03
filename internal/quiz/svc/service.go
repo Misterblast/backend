@@ -11,6 +11,7 @@ type QuizService interface {
 	ListAdmin(filter map[string]string, page int, limit int) (*response.PaginateResponse, error)
 	List(filter map[string]string, userID int) (*response.PaginateResponse, error)
 	GetResult(userID int) (quizEntity.QuizExp, error)
+	GetSubmissionResult(submissionId int) (quizEntity.QuizExp, error)
 }
 
 type quizService struct {
@@ -35,4 +36,7 @@ func (s *quizService) ListAdmin(filter map[string]string, page int, limit int) (
 
 func (s *quizService) List(filter map[string]string, userID int) (*response.PaginateResponse, error) {
 	return s.repo.List(filter, userID)
+}
+func (s *quizService) GetSubmissionResult(submissionId int) (quizEntity.QuizExp, error) {
+	return s.repo.GetSubmissionDetail(submissionId)
 }

@@ -19,6 +19,7 @@ type QuizRepository interface {
 	List(filter map[string]string, userID int) (*response.PaginateResponse, error)
 	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	GetLast(userID int) (quizEntity.QuizExp, error)
+	GetSubmissionDetail(submissionId int) (quizEntity.QuizExp, error)
 }
 
 func (r *quizRepository) List(filter map[string]string, userID int) (*response.PaginateResponse, error) {
