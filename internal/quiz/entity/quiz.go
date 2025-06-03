@@ -37,6 +37,7 @@ type QuizExp struct {
 	Correct     int          `json:"correct"`
 	Wrong       int          `json:"wrong"`
 	AttemptNo   int          `json:"attempt_no"`
+	Lesson      string       `json:"lesson"`
 	Answers     []QuizExpObj `json:"answers"`
 }
 

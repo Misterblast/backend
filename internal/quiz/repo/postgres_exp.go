@@ -131,16 +131,16 @@ func (r *quizRepository) GetSubmissionDetail(submissionId int) (quizEntity.QuizE
 	var qr quizEntity.QuizExp
 
 	query := `
-		SELECT id, answer, correct, grade, attempt_no, submitted_at, set_id
-		FROM quiz_submissions
-		WHERE id = $1
-		ORDER BY submitted_at DESC
-		LIMIT 1
+		SELECT qs.id, qs.answer, qs.correct, qs.grade, qs.attempt_no, qs.submitted_at, qs.set_id, l.code
+		from quiz_submissions qs
+		inner join sets s on qs.set_id = s.id
+		inner join lessons l on s.lesson_id = l.id
+		WHERE qs.id = $1;
 	`
 
 	var correct, attempNo, setID int
 	var answer string
-	if err := r.db.QueryRow(query, submissionId).Scan(&qr.ID, &answer, &correct, &qr.Grade, &attempNo, &qr.SubmittedAt, &setID); err != nil {
+	if err := r.db.QueryRow(query, submissionId).Scan(&qr.ID, &answer, &correct, &qr.Grade, &attempNo, &qr.SubmittedAt, &setID, &qr.Lesson); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return quizEntity.QuizExp{}, app.NewAppError(404, "quiz submission not found")
 		}
