@@ -111,10 +111,10 @@ func (h *QuizHandler) QuizSubmissionHandler(c *fiber.Ctx) error {
 	filter := map[string]string{}
 
 	if c.Query("class_id") != "" {
-		filter["class_id"] = c.Query("class")
+		filter["class_id"] = c.Query("class_id")
 	}
 	if c.Query("lesson_id") != "" {
-		filter["lesson_id"] = c.Query("lesson")
+		filter["lesson_id"] = c.Query("lesson_id")
 	}
 	if c.Query("type") != "" {
 		filter["type"] = c.Query("type")
