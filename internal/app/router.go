@@ -30,6 +30,7 @@ func SetupRouter(db *sql.DB, redis *redis.Client) *fiber.App {
 
 	api := app.Group("/v1")
 	// api := app.Group("/v2")
+	
 	class.InitializedClassService(db, redis).Router(api)
 	lesson.InitializedLessonService(db, redis, m.Validate).Router(api)
 	set.InitializedSetService(db, redis, m.Validate).Router(api)
@@ -38,6 +39,7 @@ func SetupRouter(db *sql.DB, redis *redis.Client) *fiber.App {
 	email.InitializedEmailService(db, m.Validate).Router(api)
 	quiz.InitializedQuizService(db, m.Validate).Router(api)
 	task.InitializeTaskService(db, m.Validate).Router(api)
+	task.InitializeTaskSubmissionService(db, m.Validate).Router(api)
 	content.InitializedContentService(db, redis, m.Validate).Router(api)
 
 	app.Get("/routes", func(c *fiber.Ctx) error {

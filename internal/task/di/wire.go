@@ -23,3 +23,13 @@ func InitializeTaskServiceFake(sb *sql.DB, val *validator.Validate) *handler.Tas
 
 	return &handler.TaskHandler{}
 }
+
+func InitializeTaskSubmissionServiceFake(sb *sql.DB, val *validator.Validate) *handler.TaskSubmissionHandler {
+	wire.Build(
+		handler.NewTaskSubmissionHandler,
+		service.NewTaskSubmissionService,
+		repo.NewTaskSubmissionRepository,
+	)
+
+	return &handler.TaskSubmissionHandler{}
+}

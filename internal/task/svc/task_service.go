@@ -1,4 +1,4 @@
-package service
+package svc
 
 import (
 	"github.com/ghulammuzz/misterblast/internal/task/entity"

@@ -18,7 +18,14 @@ import (
 
 func InitializeTaskService(sb *sql.DB, val *validator.Validate) *handler.TaskHandler {
 	taskRepository := repo.NewTaskRepository(sb)
-	taskService := service.NewTaskService(taskRepository)
+	taskService := svc.NewTaskService(taskRepository)
 	taskHandler := handler.NewTaskHandler(taskService, val)
 	return taskHandler
+}
+
+func InitializeTaskSubmissionService(sb *sql.DB, val *validator.Validate) *handler.TaskSubmissionHandler {
+	taskSubmissionRepository := repo.NewTaskSubmissionRepository(sb)
+	taskSubmissionService := svc.NewTaskSubmissionService(taskSubmissionRepository)
+	taskSubmissionHandler := handler.NewTaskSubmissionHandler(taskSubmissionService, val)
+	return taskSubmissionHandler
 }

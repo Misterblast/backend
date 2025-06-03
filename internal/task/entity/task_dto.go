@@ -20,7 +20,8 @@ type UpdateTaskRequestDto struct {
 }
 
 type SubmitTaskRequestDto struct {
-	Answer string `form:"answer"`
+	Answer      string `form:"answer"`
+	AttachedURL string `form:"attached_url" validate:"omitempty,url"`
 }
 
 type TaskResponseDto struct {
@@ -45,4 +46,11 @@ type TaskDetailResponseDto struct {
 type TaskStatisticDto struct {
 	TotalAssignment        int32   `json:"total_assignment"`
 	AverageAssignmentScore float32 `json:"average_assignment_score"`
+}
+
+type TaskListSubmissionResponseDto struct {
+	ID          int64  `json:"id"`
+	TaskID      int32  `json:"task_id"`
+	UserID      int64  `json:"user_id"`
+	SubmittedAt string `json:"submitted_at"`
 }

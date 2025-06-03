@@ -2,42 +2,169 @@ package repo
 
 import (
 	"database/sql"
-	"net/http"
+	"fmt"
+	"strconv"
 
 	"github.com/ghulammuzz/misterblast/internal/task/entity"
-	"github.com/ghulammuzz/misterblast/pkg/app"
-	log "github.com/ghulammuzz/misterblast/pkg/middleware"
+	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
 type TaskSubmissionRepository interface {
-	Create(taskId int64, userId int64, answer string) error
+	Create(taskId int64, userId int64, attachment entity.SubmitTaskRequestDto) error
 	ScoreSubmission(submissionId int64, userId int64, submissionDto entity.ScoreSubmissionRequestDto) error
-}
 
+	// ListByUserId(filter map[string]string, userId int64) ([]entity.TaskListSubmissionResponseDto, error)
+	ListByUserId(filter map[string]string, userId int64) (*response.PaginateResponse, error)
+	// filter (page, limit, type(this_week, old))
+
+	// LIstByTaskId(filter map[string]string, taskId int64) ([]entity.TaskListSubmissionResponseDto, error)
+	LIstByTaskId(filter map[string]string, taskId int64) (*response.PaginateResponse, error)
+	// filter (page, limit, type(this_week, old))
+}
 type TaskSubmissionRepositoryImpl struct {
 	db *sql.DB
 }
 
-func (r *TaskSubmissionRepositoryImpl) Create(taskId int64, userId int64, answer string) error {
-	query := "INSERT INTO task_submissions (task_id, user_id, answer) VALUES ($1, $2, $3)"
-	_, err := r.db.Exec(query, taskId, userId, answer)
+func (t *TaskSubmissionRepositoryImpl) Create(taskId int64, userId int64, attachment entity.SubmitTaskRequestDto) error {
+	query := `
+		INSERT INTO public.task_submissions (task_id, user_id, answer, attachment_url)
+		VALUES ($1, $2, $3, $4)
+	`
+	_, err := t.db.Exec(query, taskId, userId, attachment.Answer, attachment.AttachedURL)
+	return err
+}
+
+func (t *TaskSubmissionRepositoryImpl) LIstByTaskId(filter map[string]string, taskId int64) (*response.PaginateResponse, error) {
+	page, _ := strconv.Atoi(filter["page"])
+	limit, _ := strconv.Atoi(filter["limit"])
+	offset := (page - 1) * limit
+
+	where := "WHERE ts.task_id = $1"
+	order := ""
+
+	if filter["type"] == "this_week" {
+		where += " AND to_timestamp(ts.created_at) >= now() - interval '7 days'"
+		order = "ORDER BY ts.created_at DESC"
+	}
+
+	if filter["type"] == "old" {
+		where += " AND to_timestamp(ts.created_at) < now() - interval '7 days'"
+		order = "ORDER BY ts.created_at ASC"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT ts.id, ts.task_id, ts.user_id, ts.created_at
+		FROM task_submissions ts
+		%s
+		%s
+		LIMIT $2 OFFSET $3
+	`, where, order)
+
+	rows, err := t.db.Query(query, taskId, limit, offset)
 	if err != nil {
-		log.Error("[Repo.TaskSubmissions.InsertAttachments] failed to insert task submission, cause: %s", err.Error())
-		return app.NewAppError(http.StatusInternalServerError, "failed to submit task")
+		return nil, err
+	}
+	defer rows.Close()
+
+	var submissions []entity.TaskListSubmissionResponseDto
+	for rows.Next() {
+		var s entity.TaskListSubmissionResponseDto
+		err = rows.Scan(&s.ID, &s.TaskID, &s.UserID, &s.SubmittedAt)
+		if err != nil {
+			return nil, err
+		}
+		submissions = append(submissions, s)
+	}
+
+	var total int64
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM task_submissions ts %s`, where)
+	err = t.db.QueryRow(countQuery, taskId).Scan(&total)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.PaginateResponse{
+		Total: total,
+		Page:  page,
+		Limit: limit,
+		Data:  submissions,
+	}, nil
+}
+
+func (t *TaskSubmissionRepositoryImpl) ListByUserId(filter map[string]string, userId int64) (*response.PaginateResponse, error) {
+	page, _ := strconv.Atoi(filter["page"])
+	limit, _ := strconv.Atoi(filter["limit"])
+	offset := (page - 1) * limit
+
+	where := "WHERE ts.user_id = $1"
+	order := ""
+
+	if filter["type"] == "this_week" {
+		where += " AND to_timestamp(ts.created_at) >= now() - interval '7 days'"
+		order = "ORDER BY ts.created_at DESC"
+	}
+	if filter["type"] == "old" {
+		where += " AND to_timestamp(ts.created_at) < now() - interval '7 days'"
+		order = "ORDER BY ts.created_at ASC"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT ts.id, ts.task_id, ts.user_id, ts.created_at
+		FROM task_submissions ts
+		JOIN tasks t ON t.id = ts.task_id
+		%s
+		%s
+		LIMIT $2 OFFSET $3
+	`, where, order)
+
+	rows, err := t.db.Query(query, userId, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var submissions []entity.TaskListSubmissionResponseDto
+	for rows.Next() {
+		var s entity.TaskListSubmissionResponseDto
+		err = rows.Scan(&s.ID, &s.TaskID, &s.UserID, &s.SubmittedAt)
+		if err != nil {
+			return nil, err
+		}
+		submissions = append(submissions, s)
+	}
+
+	var total int64
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM task_submissions ts %s`, where)
+	err = t.db.QueryRow(countQuery, userId).Scan(&total)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.PaginateResponse{
+		Total: total,
+		Page:  page,
+		Limit: limit,
+		Data:  submissions,
+	}, nil
+}
+
+func (t *TaskSubmissionRepositoryImpl) ScoreSubmission(submissionId int64, userId int64, submissionDto entity.ScoreSubmissionRequestDto) error {
+	query := `
+		UPDATE public.task_submissions
+		SET score = $1, feedback = $2, scored_at = EXTRACT(EPOCH FROM now())
+		WHERE id = $3 AND user_id = $4
+	`
+	res, err := t.db.Exec(query, submissionDto.Score, submissionDto.Feedback, submissionId, userId)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }
 
-func (r *TaskSubmissionRepositoryImpl) ScoreSubmission(submissionId int64, userId int64, submissionDto entity.ScoreSubmissionRequestDto) error {
-	query := "UPDATE task_submissions SET score = $1, feedback = $2, scored_by = $3, scored_at = NOW() WHERE id = $4"
-	res, err := r.db.Exec(query, submissionDto.Score, submissionDto.Feedback, userId, submissionId)
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return app.NewAppError(http.StatusNotFound, "task submission not found")
-	}
-	if err != nil {
-		log.Error("[Repo.TaskSubmissions.ScoreSubmission] failed to update task submission score, cause: %s", err.Error())
-		return app.NewAppError(http.StatusInternalServerError, "failed to update task submission score")
-	}
-	return nil
+func NewTaskSubmissionRepository(db *sql.DB) TaskSubmissionRepository {
+	return &TaskSubmissionRepositoryImpl{db: db}
 }
