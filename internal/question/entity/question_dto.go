@@ -34,15 +34,15 @@ type ListQuestionExample struct {
 }
 
 type DetailQuestionExample struct {
-	ID          int32        `json:"id"`
-	Number      int          `json:"number"`
-	Type        string       `json:"type"`
-	Format      string       `json:"format"`
-	Content     string       `json:"content"`
-	Explanation string       `json:"explanation"`
-	Reason      string       `json:"reason"`
-	SetID       int32        `json:"set_id"`
-	Answers     []ListAnswer `json:"answers"`
+	ID          int32              `json:"id"`
+	Number      int                `json:"number"`
+	Type        string             `json:"type"`
+	Format      string             `json:"format"`
+	Content     string             `json:"content"`
+	Explanation string             `json:"explanation"`
+	Reason      string             `json:"reason"`
+	SetID       int32              `json:"set_id"`
+	Answers     []ListAnswerDetail `json:"answers"`
 }
 
 type ListQuestionQuiz struct {
