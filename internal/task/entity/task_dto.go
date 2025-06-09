@@ -49,8 +49,12 @@ type TaskStatisticDto struct {
 }
 
 type TaskListSubmissionResponseDto struct {
-	ID          int64  `json:"id"`
-	TaskID      int32  `json:"task_id"`
-	UserID      int64  `json:"user_id"`
-	SubmittedAt string `json:"submitted_at"`
+	ID          int64   `json:"id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Content     string  `json:"content"`
+	Score       *int32  `json:"score"`
+	ScoredAt    *string `json:"scored_at"`
+	SubmittedAt string  `json:"submitted_at"`
+	Feedback    *string `json:"feedback"`
 }

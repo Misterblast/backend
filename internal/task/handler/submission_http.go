@@ -124,6 +124,7 @@ func (h *TaskSubmissionHandler) ListMySubmissions(c *fiber.Ctx) error {
 
 	result, err := h.svc.GetSubmissionsByUser(filter, int64(userId))
 	if err != nil {
+		log.Error("Error retrieving submissions: %v", err)
 		var appErr *app.AppError
 		if !errors.As(err, &appErr) {
 			appErr = app.ErrInternal

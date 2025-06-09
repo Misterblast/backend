@@ -53,7 +53,7 @@ func (t *TaskSubmissionRepositoryImpl) LIstByTaskId(filter map[string]string, ta
 	}
 
 	query := fmt.Sprintf(`
-		SELECT ts.id, ts.task_id, ts.user_id, ts.created_at
+		SELECT ts.id, t.title,t.description, t.content, ts.created_at, ts.scored_at, ts.feedback, ts.score 
 		FROM task_submissions ts
 		%s
 		%s
@@ -69,7 +69,7 @@ func (t *TaskSubmissionRepositoryImpl) LIstByTaskId(filter map[string]string, ta
 	var submissions []entity.TaskListSubmissionResponseDto
 	for rows.Next() {
 		var s entity.TaskListSubmissionResponseDto
-		err = rows.Scan(&s.ID, &s.TaskID, &s.UserID, &s.SubmittedAt)
+		err = rows.Scan(&s.ID, &s.Title, &s.Description, &s.Content, &s.SubmittedAt, &s.ScoredAt, &s.Feedback, &s.Score)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func (t *TaskSubmissionRepositoryImpl) ListByUserId(filter map[string]string, us
 	}
 
 	query := fmt.Sprintf(`
-		SELECT ts.id, ts.task_id, ts.user_id, ts.created_at
+		SELECT  ts.id, t.title,t.description, t.content, ts.created_at, ts.scored_at, ts.feedback, ts.score 
 		FROM task_submissions ts
 		JOIN tasks t ON t.id = ts.task_id
 		%s
@@ -126,7 +126,7 @@ func (t *TaskSubmissionRepositoryImpl) ListByUserId(filter map[string]string, us
 	var submissions []entity.TaskListSubmissionResponseDto
 	for rows.Next() {
 		var s entity.TaskListSubmissionResponseDto
-		err = rows.Scan(&s.ID, &s.TaskID, &s.UserID, &s.SubmittedAt)
+		err = rows.Scan(&s.ID, &s.Title, &s.Description, &s.Content, &s.SubmittedAt, &s.ScoredAt, &s.Feedback, &s.Score)
 		if err != nil {
 			return nil, err
 		}
