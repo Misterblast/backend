@@ -28,8 +28,8 @@ type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) SummaryUser(id int32) (*entity.UserSummary, error) {
-	args := m.Called(id)
+func (m *MockUserService) SummaryUser(id int32, filter map[string]string) (*entity.UserSummary, error) {
+	args := m.Called(id, filter)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

@@ -267,6 +267,12 @@ func (h *UserHandler) ChangePasswordHandler(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) SummaryUserHandler(c *fiber.Ctx) error {
+	filter := map[string]string{}
+
+	if c.Query("lesson_id") != "" {
+		filter["lesson_id"] = c.Query("lesson_id")
+	}
+
 	userToken := c.Locals("user").(*jwt.Token)
 
 	claims, ok := userToken.Claims.(jwt.MapClaims)
@@ -277,7 +283,7 @@ func (h *UserHandler) SummaryUserHandler(c *fiber.Ctx) error {
 
 	userID := int(claims["user_id"].(float64))
 
-	summary, err := h.userService.SummaryUser(int32(userID))
+	summary, err := h.userService.SummaryUser(int32(userID), filter)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

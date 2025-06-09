@@ -19,7 +19,7 @@ type UserService interface {
 	EditUser(id int32, user userEntity.EditUser) error
 	DeleteUser(id int32) error
 	ChangePassword(token string, newPassword string) error
-	SummaryUser(id int32) (*userEntity.UserSummary, error)
+	SummaryUser(id int32, filter map[string]string) (*userEntity.UserSummary, error)
 }
 type userService struct {
 	userRepo  userRepo.UserRepository
@@ -30,8 +30,9 @@ type userService struct {
 func NewUserService(userRepo userRepo.UserRepository, tQuizRepo tQuizRepo.QuizRepository, tTaskRepo tTaskRepo.TaskRepository) UserService {
 	return &userService{userRepo: userRepo, tQuizRepo: tQuizRepo, tTaskRepo: tTaskRepo}
 }
-func (s *userService) SummaryUser(id int32) (*userEntity.UserSummary, error) {
-	quizCount, avgQuiz, err := s.tQuizRepo.GetAvgTotal(int(id))
+
+func (s *userService) SummaryUser(id int32, filter map[string]string) (*userEntity.UserSummary, error) {
+	quizCount, avgQuiz, err := s.tQuizRepo.GetAvgTotal(int(id), filter)
 	if err != nil {
 		return nil, err
 	}
