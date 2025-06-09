@@ -12,7 +12,7 @@ import (
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type TaskSubmissionHandler struct {
