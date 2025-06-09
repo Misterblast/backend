@@ -26,7 +26,6 @@ func (h *TaskHandler) Router(r fiber.Router) {
 	r.Get("/tasks/:id", m.R100(), h.Index)
 	r.Post("/tasks", m.R100(), h.CreateTask)
 	r.Delete("/tasks/:id", m.R100(), h.Delete)
-	r.Post("/submit-task/:id", m.R100(), m.JWTProtected(), h.SubmitTask)
 }
 
 func (h *TaskHandler) List(c *fiber.Ctx) error {
@@ -105,18 +104,4 @@ func (h *TaskHandler) CreateTask(c *fiber.Ctx) error {
 		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
 	return response.SendSuccess(c, "Task added successfully", nil)
-}
-
-func (h *TaskHandler) SubmitTask(c *fiber.Ctx) error {
-	taskId := c.Params(":id")
-	if taskId == "" {
-		return response.SendError(c, fiber.StatusBadRequest, "Empty Task ID", nil)
-	}
-
-	var submitTaskRequestDto entity.SubmitTaskRequestDto
-	if err := c.BodyParser(&submitTaskRequestDto); err != nil {
-		return response.SendError(c, fiber.StatusBadRequest, "Invalid Body", err.Error())
-	}
-
-	return response.SendSuccess(c, "tasks retrieved successfully", "")
 }
