@@ -8,6 +8,8 @@ package di
 
 import (
 	"database/sql"
+	repo2 "github.com/ghulammuzz/misterblast/internal/quiz/repo"
+	repo3 "github.com/ghulammuzz/misterblast/internal/task/repo"
 	"github.com/ghulammuzz/misterblast/internal/user/handler"
 	"github.com/ghulammuzz/misterblast/internal/user/repo"
 	"github.com/ghulammuzz/misterblast/internal/user/svc"
@@ -18,7 +20,9 @@ import (
 
 func InitializedUserService(sb *sql.DB, val *validator.Validate) *handler.UserHandler {
 	userRepository := repo.NewUserRepository(sb)
-	userService := svc.NewUserService(userRepository)
+	quizRepository := repo2.NewQuizRepository(sb)
+	taskRepository := repo3.NewTaskRepository(sb)
+	userService := svc.NewUserService(userRepository, quizRepository, taskRepository)
 	userHandler := handler.NewUserHandler(userService, val)
 	return userHandler
 }

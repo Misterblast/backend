@@ -84,3 +84,10 @@ type RegisterDTO struct {
 	Password string                `form:"password" validate:"required,min=6,max=20"`
 	Img      *multipart.FileHeader `form:"img" validate:"omitempty"`
 }
+
+type UserSummary struct {
+	TotalQuizAttempts int   `json:"total_quiz_attempts"`
+	TotalTaskAttempts int   `json:"total_task_attempts"`
+	AvgQuizScore      float64 `json:"avg_quiz_score"`
+	AvgTaskScore      float64 `json:"avg_task_score"`
+}

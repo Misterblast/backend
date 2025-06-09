@@ -1,6 +1,8 @@
 package svc
 
 import (
+	tQuizRepo "github.com/ghulammuzz/misterblast/internal/quiz/repo"
+	tTaskRepo "github.com/ghulammuzz/misterblast/internal/task/repo"
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	userRepo "github.com/ghulammuzz/misterblast/internal/user/repo"
 	"github.com/ghulammuzz/misterblast/pkg/jwt"
@@ -17,13 +19,34 @@ type UserService interface {
 	EditUser(id int32, user userEntity.EditUser) error
 	DeleteUser(id int32) error
 	ChangePassword(token string, newPassword string) error
+	SummaryUser(id int32) (*userEntity.UserSummary, error)
 }
 type userService struct {
-	userRepo userRepo.UserRepository
+	userRepo  userRepo.UserRepository
+	tQuizRepo tQuizRepo.QuizRepository
+	tTaskRepo tTaskRepo.TaskRepository
 }
 
-func NewUserService(userRepo userRepo.UserRepository) UserService {
-	return &userService{userRepo}
+func NewUserService(userRepo userRepo.UserRepository, tQuizRepo tQuizRepo.QuizRepository, tTaskRepo tTaskRepo.TaskRepository) UserService {
+	return &userService{userRepo: userRepo, tQuizRepo: tQuizRepo, tTaskRepo: tTaskRepo}
+}
+func (s *userService) SummaryUser(id int32) (*userEntity.UserSummary, error) {
+	quizCount, avgQuiz, err := s.tQuizRepo.GetAvgTotal(int(id))
+	if err != nil {
+		return nil, err
+	}
+
+	taskCount, avgTask, err := s.tTaskRepo.GetAvgTotal(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userEntity.UserSummary{
+		TotalQuizAttempts: quizCount,
+		AvgQuizScore:      avgQuiz,
+		TotalTaskAttempts: taskCount,
+		AvgTaskScore:      avgTask,
+	}, nil
 }
 
 func (s *userService) Login(user userEntity.UserLogin) (*userEntity.LoginResponse, string, error) {

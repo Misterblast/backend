@@ -99,7 +99,7 @@ func (m *MockUserRepository) UpdateImageURL(id int64, url string) error {
 
 func TestUserService_Register(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := userSvc.NewUserService(mockRepo)
+	service := userSvc.NewUserService(mockRepo, nil, nil)
 
 	dto := userEntity.RegisterDTO{
 		Name:     "John Doe",
@@ -120,7 +120,7 @@ func TestUserService_Register(t *testing.T) {
 
 func TestUserService_Login(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := userSvc.NewUserService(mockRepo)
+	service := userSvc.NewUserService(mockRepo, nil, nil)
 
 	user := userEntity.UserLogin{
 		Email:    "john@example.com",
@@ -145,7 +145,7 @@ func TestUserService_Login(t *testing.T) {
 
 func TestUserService_DeleteUser(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := userSvc.NewUserService(mockRepo)
+	service := userSvc.NewUserService(mockRepo, nil, nil)
 
 	id := int32(1)
 	mockRepo.On("Delete", id).Return(nil)
@@ -157,7 +157,7 @@ func TestUserService_DeleteUser(t *testing.T) {
 
 func TestUserService_AuthUser(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := userSvc.NewUserService(mockRepo)
+	service := userSvc.NewUserService(mockRepo, nil, nil)
 
 	id := int32(1)
 	userAuth := userEntity.UserAuth{
@@ -178,7 +178,7 @@ func TestUserService_AuthUser(t *testing.T) {
 }
 func TestUserService_ListUser(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := userSvc.NewUserService(mockRepo)
+	service := userSvc.NewUserService(mockRepo, nil, nil)
 
 	filter := map[string]string{"role": "user"}
 	page, limit := 1, 10
@@ -214,7 +214,7 @@ func TestUserService_ListUser(t *testing.T) {
 
 func TestUserService_DetailUser(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := userSvc.NewUserService(mockRepo)
+	service := userSvc.NewUserService(mockRepo, nil, nil)
 
 	id := int32(1)
 	mockUser := userEntity.DetailUser{ID: id, Name: "John Doe", Email: "john@example.com"}
@@ -229,7 +229,7 @@ func TestUserService_DetailUser(t *testing.T) {
 
 func TestUserService_EditUser(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := userSvc.NewUserService(mockRepo)
+	service := userSvc.NewUserService(mockRepo, nil, nil)
 
 	id := int32(1)
 	userEdit := userEntity.EditUser{Name: "John Updated"}

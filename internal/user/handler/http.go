@@ -33,6 +33,7 @@ func (h *UserHandler) Router(r fiber.Router) {
 	r.Put("/users/:id", m.R100(), h.EditUserHandler)
 	r.Get("/me", m.JWTProtected(), m.R100(), h.MeUserHandler)
 	r.Put("/reset-password", m.R100(), h.ChangePasswordHandler)
+	r.Get("/summary", m.JWTProtected(), m.R100(), h.SummaryUserHandler)
 }
 
 func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
@@ -263,4 +264,26 @@ func (h *UserHandler) ChangePasswordHandler(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "Change Password registered successfully", nil)
+}
+
+func (h *UserHandler) SummaryUserHandler(c *fiber.Ctx) error {
+	userToken := c.Locals("user").(*jwt.Token)
+
+	claims, ok := userToken.Claims.(jwt.MapClaims)
+	if !ok || !userToken.Valid {
+		log.Error("Invalid token")
+		return response.SendError(c, fiber.StatusUnauthorized, "Invalid token", nil)
+	}
+
+	userID := int(claims["user_id"].(float64))
+
+	summary, err := h.userService.SummaryUser(int32(userID))
+	if err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+	return response.SendSuccess(c, "User summary retrieved successfully", summary)
 }

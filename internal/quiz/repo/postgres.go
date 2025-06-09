@@ -20,6 +20,7 @@ type QuizRepository interface {
 	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	GetLast(userID int) (quizEntity.QuizExp, error)
 	GetSubmissionDetail(submissionId int) (quizEntity.QuizExp, error)
+	GetAvgTotal(userID int) (int, float64, error)
 }
 
 func (r *quizRepository) List(filter map[string]string, userID int) (*response.PaginateResponse, error) {
@@ -247,6 +248,7 @@ func (r *quizRepository) Submit(req quizEntity.QuizSubmit, setID int, userID int
 type quizRepository struct {
 	db *sql.DB
 }
+
 
 func NewQuizRepository(db *sql.DB) QuizRepository {
 	return &quizRepository{db: db}

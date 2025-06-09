@@ -18,6 +18,7 @@ type TaskRepository interface {
 	Index(taskId int32) (entity.TaskDetailResponseDto, error)
 	Update(task entity.Task) error
 	Delete(taskId int32) error
+	GetAvgTotal(userID int32) (int, float64, error)
 }
 
 type TaskRepositoryImpl struct {

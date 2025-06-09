@@ -28,6 +28,14 @@ type MockUserService struct {
 	mock.Mock
 }
 
+func (m *MockUserService) SummaryUser(id int32) (*entity.UserSummary, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserSummary), args.Error(1)
+}
+
 func (m *MockUserService) Register(user entity.RegisterDTO) error {
 	args := m.Called(user)
 	return args.Error(0)
