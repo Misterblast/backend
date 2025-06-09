@@ -91,7 +91,8 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 			'id', a.id,
 			'code', a.code,
 			'content', a.content,
-			'img_url', a.img_url
+			'img_url', a.img_url,
+			'is_answer', a.is_answer
 		)) FILTER (WHERE a.id IS NOT NULL), '[]') AS answers
 	FROM questions q
 	LEFT JOIN answers a ON q.id = a.question_id

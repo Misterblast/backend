@@ -16,8 +16,17 @@ type EditAnswer struct {
 }
 
 type ListAnswer struct {
-	ID      int32   `json:"id"`
-	Code    string  `json:"code"`
-	Content string  `json:"content"`
-	ImgURL  *string `json:"img_url"`
+	ID       int32   `json:"id"`
+	Code     string  `json:"code"`
+	Content  string  `json:"content"`
+	ImgURL   *string `json:"img_url"`
 }
+
+type ListAnswerDetail struct {
+	ID       int32   `json:"id"`
+	Code     string  `json:"code"`
+	Content  string  `json:"content"`
+	ImgURL   *string `json:"img_url"`
+	IsAnswer bool    `json:"is_answer"`
+}
+
