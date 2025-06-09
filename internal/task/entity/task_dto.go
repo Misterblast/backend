@@ -58,3 +58,10 @@ type TaskListSubmissionResponseDto struct {
 	SubmittedAt string  `json:"submitted_at"`
 	Feedback    *string `json:"feedback"`
 }
+
+type TaskSubmissionDetailResponseDto struct {
+	TaskListSubmissionResponseDto
+	Answer              string  `json:"answer"`
+	TaskAttachmentUrl   *string `json:"task_attachment_url"`
+	AnswerAttachmentUrl *string `json:"answer_attachment_url"`
+}

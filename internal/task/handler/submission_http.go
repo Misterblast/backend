@@ -29,6 +29,7 @@ func (h *TaskSubmissionHandler) Router(r fiber.Router) {
 	r.Post("/submit-task/:id/score/:submissionId", m.R100(), m.JWTProtected(), h.ScoreSubmission)
 	r.Get("/my-submissions", m.R100(), m.JWTProtected(), h.ListMySubmissions)
 	r.Get("/task-submissions/:taskId", m.R100(), m.JWTProtected(), h.ListTaskSubmissions)
+	r.Get("/submission/:submissionId", m.R100(), m.JWTProtected(), h.GetSubmissionDetail)
 }
 
 func (h *TaskSubmissionHandler) SubmitTask(c *fiber.Ctx) error {
@@ -157,4 +158,22 @@ func (h *TaskSubmissionHandler) ListTaskSubmissions(c *fiber.Ctx) error {
 	}
 
 	return response.SendSuccess(c, "Submissions retrieved", result)
+}
+
+func (h *TaskSubmissionHandler) GetSubmissionDetail(c *fiber.Ctx) error {
+	submissionId, err := strconv.ParseInt(c.Params("submissionId"), 10, 64)
+	if err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid Submission ID", nil)
+	}
+
+	result, err := h.svc.GetSubmissionDetailById(submissionId)
+	if err != nil {
+		var appErr *app.AppError
+		if !errors.As(err, &appErr) {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "Submission detail retrieved", result)
 }

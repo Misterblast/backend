@@ -20,6 +20,7 @@ type TaskSubmissionRepository interface {
 	// LIstByTaskId(filter map[string]string, taskId int64) ([]entity.TaskListSubmissionResponseDto, error)
 	LIstByTaskId(filter map[string]string, taskId int64) (*response.PaginateResponse, error)
 	// filter (page, limit, type(this_week, old))
+	SubmissionDetailById(submissionId int64) (*entity.TaskSubmissionDetailResponseDto, error)
 }
 type TaskSubmissionRepositoryImpl struct {
 	db *sql.DB
@@ -163,6 +164,27 @@ func (t *TaskSubmissionRepositoryImpl) ScoreSubmission(submissionId int64, userI
 		return sql.ErrNoRows
 	}
 	return nil
+}
+func (t *TaskSubmissionRepositoryImpl) SubmissionDetailById(submissionId int64) (*entity.TaskSubmissionDetailResponseDto, error) {
+	var response entity.TaskSubmissionDetailResponseDto
+	query := `
+			SELECT
+				ts.id, t.title,t.description, t.content, t.attachment_url,
+				ts.answer , ts.attachment_url,
+				ts.score, ts.scored_at, ts.created_at, ts.feedback
+			FROM task_submissions ts 
+				LEFT JOIN tasks t ON t.id = ts.task_id
+			WHERE ts.id = $1
+			`
+	row := t.db.QueryRow(query, submissionId)
+	if err := row.Scan(
+		&response.ID, &response.Title, &response.Description, &response.Content, &response.TaskAttachmentUrl,
+		&response.Answer, &response.AnswerAttachmentUrl,
+		&response.Score, &response.ScoredAt, &response.SubmittedAt, &response.Feedback,
+	); err != nil {
+		return nil, err
+	}
+	return &response, nil
 }
 
 func NewTaskSubmissionRepository(db *sql.DB) TaskSubmissionRepository {

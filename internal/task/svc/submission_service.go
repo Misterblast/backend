@@ -12,6 +12,7 @@ type TaskSubmissionService interface {
 	GiveScore(submissionId int64, userId int64, dto entity.ScoreSubmissionRequestDto) error
 	GetSubmissionsByUser(filter map[string]string, userId int64) (*response.PaginateResponse, error)
 	GetSubmissionsByTask(filter map[string]string, taskId int64) (*response.PaginateResponse, error)
+	GetSubmissionDetailById(submissionId int64) (*entity.TaskSubmissionDetailResponseDto, error)
 }
 
 type TaskSubmissionServiceImpl struct {
@@ -42,4 +43,8 @@ func (s *TaskSubmissionServiceImpl) GetSubmissionsByUser(filter map[string]strin
 
 func (s *TaskSubmissionServiceImpl) GetSubmissionsByTask(filter map[string]string, taskId int64) (*response.PaginateResponse, error) {
 	return s.repo.LIstByTaskId(filter, taskId)
+}
+
+func (s *TaskSubmissionServiceImpl) GetSubmissionDetailById(submissionId int64) (*entity.TaskSubmissionDetailResponseDto, error) {
+	return s.repo.SubmissionDetailById(submissionId)
 }
