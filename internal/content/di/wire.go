@@ -21,3 +21,13 @@ func InitializedContentServiceFake(db *sql.DB, redis *redis.Client, val *validat
 
 	return &contentHandler.ContentHandler{}
 }
+
+func InitializedAuthorServiceFake(db *sql.DB, redis *redis.Client, val *validator.Validate) *contentHandler.AuthorHandler {
+	wire.Build(
+		contentHandler.NewAuthorHandler,
+		contentSvc.NewAuthorService,
+		contentRepo.NewAuthorRepository,
+	)
+
+	return &contentHandler.AuthorHandler{}
+}

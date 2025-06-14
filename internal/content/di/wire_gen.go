@@ -23,3 +23,10 @@ func InitializedContentService(db *sql.DB, redis2 *redis.Client, val *validator.
 	contentHandler := handler.NewContentHandler(contentService, val)
 	return contentHandler
 }
+
+func InitializedAuthorService(db *sql.DB, redis2 *redis.Client, val *validator.Validate) *handler.AuthorHandler {
+	authorRepository := repo.NewAuthorRepository(db, redis2)
+	authorService := svc.NewAuthorService(authorRepository)
+	authorHandler := handler.NewAuthorHandler(authorService, val)
+	return authorHandler
+}
