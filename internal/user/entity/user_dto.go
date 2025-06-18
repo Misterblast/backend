@@ -81,13 +81,13 @@ type RegisterDTO struct {
 	Name     string                `form:"name" validate:"required,min=2,max=20"`
 	Email    string                `form:"email" validate:"required,email"`
 	Password string                `form:"password" validate:"required,min=6,max=20"`
-	Img      *multipart.FileHeader `form:"img" validate:"omitempty"`
+	Img      *multipart.FileHeader `form:"image" validate:"omitempty"`
 }
 
 type EditDTO struct {
 	Name  string                `form:"name" validate:"required,min=2,max=20"`
 	Email string                `form:"email" validate:"required,email"`
-	Img   *multipart.FileHeader `form:"img,omitempty"`
+	Img   *multipart.FileHeader `form:"image,omitempty"`
 }
 
 type UserSummary struct {
