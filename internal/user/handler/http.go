@@ -179,14 +179,19 @@ func (h *UserHandler) EditUserHandler(c *fiber.Ctx) error {
 		return response.SendError(c, fiber.StatusBadRequest, "Invalid user ID", nil)
 	}
 
-	var user entity.EditUser
-	if err := c.BodyParser(&user); err != nil {
-		return response.SendError(c, fiber.StatusBadRequest, "Invalid request body", nil)
+	user := entity.EditDTO{
+		Name:  c.FormValue("name"),
+		Email: c.FormValue("email"),
+	}
+
+	if form, err := c.MultipartForm(); err == nil {
+		if files := form.File["img"]; len(files) > 0 {
+			user.Img = files[0]
+		}
 	}
 
 	if err := h.val.Struct(user); err != nil {
 		validationErrors := app.ValidationErrorResponse(err)
-		log.Error("Validation failed: %v", validationErrors)
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
 	}
 

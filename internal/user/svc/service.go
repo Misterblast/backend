@@ -16,7 +16,7 @@ type UserService interface {
 	ListUser(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	DetailUser(id int32) (userEntity.DetailUser, error)
 	AuthUser(id int32) (userEntity.UserAuth, error)
-	EditUser(id int32, user userEntity.EditUser) error
+	EditUser(id int32, user userEntity.EditDTO) error
 	DeleteUser(id int32) error
 	ChangePassword(token string, newPassword string) error
 	SummaryUser(id int32, filter map[string]string) (*userEntity.UserSummary, error)
@@ -78,10 +78,6 @@ func (s *userService) ListUser(filter map[string]string, page, limit int) (*resp
 
 func (s *userService) DetailUser(id int32) (userEntity.DetailUser, error) {
 	return s.userRepo.Detail(id)
-}
-
-func (s *userService) EditUser(id int32, user userEntity.EditUser) error {
-	return s.userRepo.Edit(id, user)
 }
 
 func (s *userService) AuthUser(id int32) (userEntity.UserAuth, error) {

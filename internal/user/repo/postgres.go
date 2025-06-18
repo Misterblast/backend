@@ -3,6 +3,7 @@ package repo
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	emailEntity "github.com/ghulammuzz/misterblast/internal/email/entity"
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
@@ -107,7 +108,6 @@ func (r *userRepository) List(filter map[string]string, page, limit int) (*respo
 	args := []interface{}{}
 	argCount := 1
 
-	// Handle pencarian (search)
 	searchClause := ""
 	if search, exists := filter["search"]; exists && search != "" {
 		searchClause = ` AND (LOWER(name) LIKE LOWER($` + fmt.Sprintf("%d", argCount) + `) OR LOWER(email) LIKE LOWER($` + fmt.Sprintf("%d", argCount+1) + `))`
@@ -115,14 +115,12 @@ func (r *userRepository) List(filter map[string]string, page, limit int) (*respo
 		argCount += 2
 	}
 
-	// Query untuk menghitung total user sebelum pagination
 	countQuery := `SELECT COUNT(*) ` + baseQuery + searchClause
 	var total int64
 	if err := r.DB.QueryRow(countQuery, args...).Scan(&total); err != nil {
 		return nil, app.NewAppError(500, "failed to count users")
 	}
 
-	// Query untuk mengambil user dengan pagination
 	query := `SELECT id, name, email, COALESCE(img_url, '') ` + baseQuery + searchClause + ` ORDER BY id LIMIT $` + fmt.Sprintf("%d", argCount) + ` OFFSET $` + fmt.Sprintf("%d", argCount+1)
 	args = append(args, limit, (page-1)*limit)
 
@@ -168,13 +166,31 @@ func (r *userRepository) Detail(id int32) (userEntity.DetailUser, error) {
 }
 
 func (r *userRepository) Edit(id int32, user userEntity.EditUser) error {
-	query := `UPDATE users SET name=$1, email=$2, password=$3, img_url=$4, updated_at=EXTRACT(EPOCH FROM NOW()) WHERE id=$5`
+	query := `UPDATE users SET `
+	args := []interface{}{}
+	argIdx := 1
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
+	if user.Name != "" {
+		query += fmt.Sprintf("name=$%d,", argIdx)
+		args = append(args, user.Name)
+		argIdx++
 	}
-	_, err = r.DB.Exec(query, user.Name, user.Email, hashedPassword, user.ImgUrl, id)
+	if user.Email != "" {
+		query += fmt.Sprintf("email=$%d,", argIdx)
+		args = append(args, user.Email)
+		argIdx++
+	}
+	if user.ImgUrl != nil {
+		query += fmt.Sprintf("img_url=$%d,", argIdx)
+		args = append(args, *user.ImgUrl)
+		argIdx++
+	}
+
+	query += fmt.Sprintf("updated_at=EXTRACT(EPOCH FROM NOW()) WHERE id=$%d", argIdx)
+	args = append(args, id)
+	query = strings.Replace(query, ", updated_at", " updated_at", 1)
+
+	_, err := r.DB.Exec(query, args...)
 	return err
 }
 

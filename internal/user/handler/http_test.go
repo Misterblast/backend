@@ -75,8 +75,8 @@ func (m *MockUserService) DetailUser(userID int32) (entity.DetailUser, error) {
 	return args.Get(0).(entity.DetailUser), args.Error(1)
 }
 
-func (m *MockUserService) EditUser(userID int32, user entity.EditUser) error {
-	args := m.Called(userID, user)
+func (m *MockUserService) EditUser(id int32, user entity.EditDTO) error {
+	args := m.Called(id, user)
 	return args.Error(0)
 }
 
@@ -199,15 +199,27 @@ func TestEditUserHandler(t *testing.T) {
 	h := handler.NewUserHandler(mockService, validator.New())
 	app.Put("/users/:id", h.EditUserHandler)
 
-	userEdit := entity.EditUser{Name: "John Updated", Email: "john@edit.com"}
-	mockService.On("EditUser", int32(1), userEdit).Return(nil)
+	form := new(bytes.Buffer)
+	writer := multipart.NewWriter(form)
+	_ = writer.WriteField("name", "John Updated")
+	_ = writer.WriteField("email", "john@edit.com")
+	writer.Close()
 
-	body, _ := json.Marshal(userEdit)
-	req := httptest.NewRequest(http.MethodPut, "/users/1", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req)
+	expectedDTO := entity.EditDTO{
+		Name:  "John Updated",
+		Email: "john@edit.com",
+		Img:   nil,
+	}
 
+	mockService.On("EditUser", int32(1), expectedDTO).Return(nil)
+
+	req := httptest.NewRequest(http.MethodPut, "/users/1", form)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
 	mockService.AssertExpectations(t)
 }
 

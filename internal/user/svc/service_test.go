@@ -236,7 +236,11 @@ func TestUserService_EditUser(t *testing.T) {
 
 	mockRepo.On("Edit", id, userEdit).Return(nil)
 
-	err := service.EditUser(id, userEdit)
+	editDTO := userEntity.EditDTO{
+		Name: userEdit.Name,
+	}
+
+	err := service.EditUser(id, editDTO)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }

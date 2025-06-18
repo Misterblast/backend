@@ -76,3 +76,30 @@ func (s *userService) RegisterAdmin(user userEntity.RegisterAdmin) error {
 
 	return nil
 }
+
+func (s *userService) EditUser(id int32, user userEntity.EditDTO) error {
+	edUser := userEntity.EditUser{
+		Name:  user.Name,
+		Email: user.Email,
+	}
+
+	if err := s.userRepo.Edit(id, edUser); err != nil {
+		log.Error("[UserSvc] Failed to update user", "error", err)
+		return err
+	}
+
+	if user.Img != nil {
+		go func(userImg *multipart.FileHeader, userID int64, svc *userService) {
+			url, err := repo.ImageUploadProxyRESTY(userImg, fmt.Sprintf("/prod/user/profile-img/%d", userID))
+			if err != nil {
+				log.Error("[UserSvc] Failed to upload user image", "error", err)
+				return
+			}
+			if err := svc.userRepo.UpdateImageURL(userID, url); err != nil {
+				log.Error("[UserSvc] Failed to update user image URL", "error", err)
+			}
+		}(user.Img, int64(id), s)
+	}
+
+	return nil
+}
