@@ -97,6 +97,11 @@ func (m *MockUserRepository) UpdateImageURL(id int64, url string) error {
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) UpdatePassword(id int32, password string) error {
+	args := m.Called(id, password)
+	return args.Error(0)
+}
+
 func TestUserService_Register(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	service := userSvc.NewUserService(mockRepo, nil, nil)

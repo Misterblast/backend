@@ -97,4 +97,6 @@ type UserSummary struct {
 	AvgTaskScore      float64 `json:"avg_task_score"`
 }
 
-// "https://stg.file.go-assessment.link/file?key=prod/user/profile-img/71/misterblast-1.png"
+type EditPasswordDTO struct {
+	Password string `json:"password" validate:"required,min=6,max=64"`
+}

@@ -88,11 +88,16 @@ func (m *MockUserService) ListUser(filters map[string]string, limit int, offset 
 	return args.Get(0).(*response.PaginateResponse), args.Error(1)
 }
 
-// not implements
 func (m *MockUserService) ChangePassword(token string, newPassword string) error {
 	args := m.Called(token, newPassword)
 	return args.Error(0)
 }
+
+func (m *MockUserService) UpdatePassword(id int32, pw string) error {
+	args := m.Called(id, pw)
+	return args.Error(0)
+}
+
 func TestRegisterHandler(t *testing.T) {
 	app := fiber.New()
 	mockService := new(MockUserService)

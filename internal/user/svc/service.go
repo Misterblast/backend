@@ -6,6 +6,7 @@ import (
 	userEntity "github.com/ghulammuzz/misterblast/internal/user/entity"
 	userRepo "github.com/ghulammuzz/misterblast/internal/user/repo"
 	"github.com/ghulammuzz/misterblast/pkg/jwt"
+	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
 )
 
@@ -20,6 +21,7 @@ type UserService interface {
 	DeleteUser(id int32) error
 	ChangePassword(token string, newPassword string) error
 	SummaryUser(id int32, filter map[string]string) (*userEntity.UserSummary, error)
+	UpdatePassword(id int32, pw string) error
 }
 type userService struct {
 	userRepo  userRepo.UserRepository
@@ -96,4 +98,12 @@ func (s *userService) ChangePassword(token string, newPassword string) error {
 	}
 
 	return s.userRepo.EditPassword(deeplink.UserID, newPassword)
+}
+
+func (s *userService) UpdatePassword(id int32, pw string) error {
+	if err := s.userRepo.UpdatePassword(id, pw); err != nil {
+		log.Error("[UserSvc][UpdatePassword] Failed to update password", "error", err)
+		return err
+	}
+	return nil
 }

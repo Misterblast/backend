@@ -34,6 +34,7 @@ func (h *UserHandler) Router(r fiber.Router) {
 	r.Get("/me", m.JWTProtected(), m.R100(), h.MeUserHandler)
 	r.Put("/reset-password", m.R100(), h.ChangePasswordHandler)
 	r.Get("/summary", m.JWTProtected(), m.R100(), h.SummaryUserHandler)
+	r.Put("/users/:id/password", m.R100(), h.UpdatePasswordHandler)
 }
 
 func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
@@ -297,4 +298,32 @@ func (h *UserHandler) SummaryUserHandler(c *fiber.Ctx) error {
 		return response.SendError(c, appErr.Code, appErr.Message, nil)
 	}
 	return response.SendSuccess(c, "User summary retrieved successfully", summary)
+}
+
+func (h *UserHandler) UpdatePasswordHandler(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid user ID", nil)
+	}
+
+	var dto entity.EditPasswordDTO
+	if err := c.BodyParser(&dto); err != nil {
+		return response.SendError(c, fiber.StatusBadRequest, "Invalid JSON body", nil)
+	}
+
+	if err := h.val.Struct(dto); err != nil {
+		validationErrors := app.ValidationErrorResponse(err)
+		log.Error("Validation failed: %v", validationErrors)
+		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
+	}
+
+	if err := h.userService.UpdatePassword(int32(id), dto.Password); err != nil {
+		appErr, ok := err.(*app.AppError)
+		if !ok {
+			appErr = app.ErrInternal
+		}
+		return response.SendError(c, appErr.Code, appErr.Message, nil)
+	}
+
+	return response.SendSuccess(c, "Password updated successfully", nil)
 }

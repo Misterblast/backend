@@ -29,6 +29,7 @@ type UserRepository interface {
 	GetDeeplink(token string) (emailEntity.DeeplinkResponse, error)
 	GenerateToken() (string, error)
 	UpdateImageURL(id int64, url string) error
+	UpdatePassword(id int32, password string) error
 }
 
 type userRepository struct {
@@ -250,6 +251,23 @@ func (r *userRepository) UpdateImageURL(id int64, url string) error {
 	if err != nil {
 		log.Error("[UserRepo][UpdateImageURL] Error updating image url: ", err)
 		return err
+	}
+
+	return nil
+}
+
+func (r *userRepository) UpdatePassword(id int32, password string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Error("[UserRepo][UpdatePassword] Error hashing password: ", err)
+		return app.NewAppError(500, "failed to hash password")
+	}
+
+	query := `UPDATE users SET password = $1, updated_at = EXTRACT(EPOCH FROM NOW()) WHERE id = $2`
+	_, err = r.DB.Exec(query, hashedPassword, id)
+	if err != nil {
+		log.Error("[UserRepo][UpdatePassword] Error updating password: ", err)
+		return app.NewAppError(500, "failed to update password")
 	}
 
 	return nil
