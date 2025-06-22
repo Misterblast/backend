@@ -265,13 +265,14 @@ func (h *QuestionHandler) ListQuestionAdminHandler(c *fiber.Ctx) error {
 		filter["search"] = c.Query("search")
 	}
 	if c.Query("lessonCode") != "" {
-		filter["code"] = c.Query("lessonCode")
+		filter["lessonCode"] = c.Query("lessonCode")
 	}
 	lang := c.Get("Lang")
 	if lang == "" {
-		lang = "id"
-	} else if lang != "id" && lang != "en" {
-		return response.SendError(c, 400, "invalid lang, only 'id' or 'en' allowed", nil)
+		lang = c.Query("lang") 
+	}
+	if lang == "" {
+		lang = "id" 
 	}
 	filter["lang"] = lang
 
