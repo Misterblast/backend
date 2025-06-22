@@ -3,9 +3,11 @@ package app
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	m "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/redis/go-redis/v9"
 
 	class "github.com/ghulammuzz/misterblast/internal/class/di"
@@ -43,6 +45,18 @@ func SetupRouter(db *sql.DB, redis *redis.Client) *fiber.App {
 	content.InitializedContentService(db, redis, m.Validate).Router(api)
 	content.InitializedAuthorService(db, redis, m.Validate).Router(api)
 
+	app.Get("/.well-known/assetlinks.json", func(c *fiber.Ctx) error {
+		jsonData, err := os.ReadFile("internal-link.json")
+		if err != nil {
+			log.Errorf("Failed to read assetlinks data: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to read assetlinks data",
+			})
+		}
+
+		c.Set("Content-Type", "application/json")
+		return c.Send(jsonData)
+	})
 	app.Get("/routes", func(c *fiber.Ctx) error {
 		routes := app.Stack()
 		uniqueRoutes := make(map[string]bool)
