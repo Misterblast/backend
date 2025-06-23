@@ -59,13 +59,14 @@ func (o *otpService) SendDeeplinkEmailSMTP(to string, deeplink string) error {
 	smtpPort := "587"
 	smtpUser := os.Getenv("EMAIL_HOST_USER")
 	smtpPassword := os.Getenv("EMAIL_HOST_PASSWORD")
+	baseURL := os.Getenv("BASE_URL")
 
 	auth := smtp.PlainAuth("", smtpUser, smtpPassword, smtpHost)
 
 	msg := []byte("To: " + to + "\r\n" +
 		"Subject: OTP Verification\r\n" +
 		"\r\n" +
-		"Klik Tautan untuk mereset Password: " + deeplink + "\r\n")
+		"Klik Tautan untuk mereset Password: " + baseURL + "/update-password?code=" + deeplink + "\r\n")
 
 	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, smtpUser, []string{to}, msg)
 	if err != nil {
