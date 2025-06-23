@@ -1,8 +1,10 @@
 [{
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
-    "namespace": "go_assessment",
+    "namespace": "android_app",
     "package_name": "com.bluenv.goassessment",
-    "sha256_cert_fingerprints":"7D:34:5F:28:AB:E4:7E:1B:99:AA:AB:9C:81:D8:A0:2A:89:BE:09:99:36:D2:D0:B9:A4:72:7A:AF:9B:90:CE:16"
+    "sha256_cert_fingerprints": [
+      "7D:34:5F:28:AB:E4:7E:1B:99:AA:AB:9C:81:D8:A0:2A:89:BE:09:99:36:D2:D0:B9:A4:72:7A:AF:9B:90:CE:16"
+    ]
   }
 }]
