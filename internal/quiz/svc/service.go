@@ -7,7 +7,7 @@ import (
 )
 
 type QuizService interface {
-	SubmitQuiz(req quizEntity.QuizSubmit, setID int, userID int) (int, error)
+	SubmitQuiz(req quizEntity.QuizSubmit, setID int, userID int, lang string) (int, error)
 	ListAdmin(filter map[string]string, page int, limit int) (*response.PaginateResponse, error)
 	List(filter map[string]string, userID int) (*response.PaginateResponse, error)
 	GetResult(userID int) (quizEntity.QuizExp, error)
@@ -26,8 +26,8 @@ func NewQuizService(repo quizRepo.QuizRepository) QuizService {
 	return &quizService{repo: repo}
 }
 
-func (s *quizService) SubmitQuiz(req quizEntity.QuizSubmit, setID int, userID int) (int, error) {
-	return s.repo.Submit(req, setID, userID)
+func (s *quizService) SubmitQuiz(req quizEntity.QuizSubmit, setID int, userID int, lang string) (int, error) {
+	return s.repo.Submit(req, setID, userID, lang)
 }
 
 func (s *quizService) ListAdmin(filter map[string]string, page int, limit int) (*response.PaginateResponse, error) {

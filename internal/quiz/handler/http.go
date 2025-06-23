@@ -49,6 +49,14 @@ func (h *QuizHandler) SubmitQuizHandler(c *fiber.Ctx) error {
 
 	userID := int(claims["user_id"].(float64))
 
+	lang := c.Get("Lang")
+	if lang == "" {
+		lang = c.Query("lang")
+	}
+	if lang == "" {
+		lang = "id"
+	}
+
 	if err := c.BodyParser(&req); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "invalid request body", nil)
 	}
@@ -56,7 +64,7 @@ func (h *QuizHandler) SubmitQuizHandler(c *fiber.Ctx) error {
 	if err := h.val.Struct(req); err != nil {
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", err.Error())
 	}
-	id, err := h.quizService.SubmitQuiz(req, setID, userID)
+	id, err := h.quizService.SubmitQuiz(req, setID, userID, lang)
 	if err != nil {
 		appErr, ok := err.(*app.AppError)
 		if !ok {

@@ -15,7 +15,7 @@ import (
 )
 
 type QuizRepository interface {
-	Submit(req quizEntity.QuizSubmit, setId int, userId int) (int, error)
+	Submit(req quizEntity.QuizSubmit, setId int, userId int, lang string) (int, error)
 	List(filter map[string]string, userID int) (*response.PaginateResponse, error)
 	ListAdmin(filter map[string]string, page, limit int) (*response.PaginateResponse, error)
 	GetLast(userID int) (quizEntity.QuizExp, error)
@@ -131,12 +131,12 @@ func (r *quizRepository) List(filter map[string]string, userID int) (*response.P
 	return paginateResp, nil
 }
 
-func (r *quizRepository) checkTotalQuestion(setID int) (int, error) {
+func (r *quizRepository) checkTotalQuestion(setID int, lang string) (int, error) {
 	var total int
 
-	query := `SELECT COUNT(*) FROM questions WHERE set_id = $1`
+	query := `SELECT COUNT(*) FROM questions WHERE set_id = $1 and lang = $2`
 
-	err := r.db.QueryRow(query, setID).Scan(&total)
+	err := r.db.QueryRow(query, setID, lang).Scan(&total)
 	if err != nil {
 		log.Error("[Repo][checkTotalQuestion] Error Exec: ", err)
 		return 0, app.NewAppError(500, err.Error())
@@ -167,8 +167,8 @@ func (r *quizRepository) checkCorrectAnswer(setID int) (string, error) {
 	return correctAnswers, nil
 }
 
-func (r *quizRepository) checkQuizScore(userAnswer, correctAnswer string, setID int) (int, int, error) {
-	totalQuestions, err := r.checkTotalQuestion(setID)
+func (r *quizRepository) checkQuizScore(userAnswer, correctAnswer string, setID int, lang string) (int, int, error) {
+	totalQuestions, err := r.checkTotalQuestion(setID, lang)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -200,13 +200,13 @@ func (r *quizRepository) getNextAttemptNo(setID int, userID int) (int, error) {
 	return attemptNo, nil
 }
 
-func (r *quizRepository) Submit(req quizEntity.QuizSubmit, setID int, userID int) (int, error) {
+func (r *quizRepository) Submit(req quizEntity.QuizSubmit, setID int, userID int, lang string) (int, error) {
 	correctAnswer, err := r.checkCorrectAnswer(setID)
 	if err != nil {
 		return 0, err
 	}
 
-	totalQuestions, err := r.checkTotalQuestion(setID)
+	totalQuestions, err := r.checkTotalQuestion(setID, lang)
 	if err != nil {
 		return 0, err
 	}
@@ -230,7 +230,7 @@ func (r *quizRepository) Submit(req quizEntity.QuizSubmit, setID int, userID int
 		return 0, err
 	}
 
-	score, correctCount, err := r.checkQuizScore(answerStr, correctAnswer, setID)
+	score, correctCount, err := r.checkQuizScore(answerStr, correctAnswer, setID, lang)
 	if err != nil {
 		return 0, err
 	}
