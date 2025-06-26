@@ -26,10 +26,10 @@ func NewTaskSubmissionHandler(s svc.TaskSubmissionService, val *validator.Valida
 
 func (h *TaskSubmissionHandler) Router(r fiber.Router) {
 	r.Post("/submit-task/:id", m.R100(), m.JWTProtected(), h.SubmitTask)
-	r.Post("/submit-task/:id/score/:submissionId", m.R100(), m.JWTProtected(), h.ScoreSubmission)
+	r.Put("/submission/:submissionId/score", m.R100(), h.ScoreSubmission)
 	r.Get("/my-submissions", m.R100(), m.JWTProtected(), h.ListMySubmissions)
 	r.Get("/task-submissions/:taskId", m.R100(), m.JWTProtected(), h.ListTaskSubmissions)
-	r.Get("/submission/:submissionId", m.R100(), m.JWTProtected(), h.GetSubmissionDetail)
+	r.Get("/submission/:submissionId", m.R100(), h.GetSubmissionDetail)
 }
 
 func (h *TaskSubmissionHandler) SubmitTask(c *fiber.Ctx) error {
@@ -53,17 +53,35 @@ func (h *TaskSubmissionHandler) SubmitTask(c *fiber.Ctx) error {
 		return response.SendError(c, fiber.StatusBadRequest, "Invalid body", err.Error())
 	}
 
-	if err := h.val.Struct(dto); err != nil {
+	submitDTO := entity.SubmitTaskRequestDto{
+		Answer: c.FormValue("answer"),
+	}
+
+	if form, err := c.MultipartForm(); err == nil {
+		if files := form.File["attached_url"]; len(files) > 0 {
+			file := files[0]
+			const maxFileSize = 3 * 1024 * 1024
+
+			if file.Size > maxFileSize {
+				log.Error("File size exceeds 3MB limit", "fileSize", file.Size)
+				return response.SendError(c, fiber.StatusBadRequest, "File size exceeds 3MB limit", nil)
+			}
+
+			submitDTO.AttachedURL = file
+		}
+	}
+
+	if err := h.val.Struct(submitDTO); err != nil {
 		validationErrors := app.ValidationErrorResponse(err)
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
 	}
 
-	if err := h.svc.SubmitTask(taskId, int64(userId), dto); err != nil {
+	if err := h.svc.SubmitTask(taskId, int64(userId), submitDTO); err != nil {
 		var appErr *app.AppError
 		if !errors.As(err, &appErr) {
 			appErr = app.ErrInternal
 		}
-		return response.SendError(c, appErr.Code, appErr.Message, nil)
+		return response.SendError(c, appErr.Code, appErr.Message, err.Error())
 	}
 
 	return response.SendSuccess(c, "Task submitted successfully", nil)
@@ -75,15 +93,15 @@ func (h *TaskSubmissionHandler) ScoreSubmission(c *fiber.Ctx) error {
 		return response.SendError(c, fiber.StatusBadRequest, "Invalid Submission ID", nil)
 	}
 
-	userToken := c.Locals("user").(*jwt.Token)
+	// userToken := c.Locals("user").(*jwt.Token)
 
-	claims, ok := userToken.Claims.(jwt.MapClaims)
-	if !ok || !userToken.Valid {
-		log.Error("Invalid token")
-		return response.SendError(c, fiber.StatusUnauthorized, "Invalid token", nil)
-	}
+	// claims, ok := userToken.Claims.(jwt.MapClaims)
+	// if !ok || !userToken.Valid {
+	// 	log.Error("Invalid token")
+	// 	return response.SendError(c, fiber.StatusUnauthorized, "Invalid token", nil)
+	// }
 
-	userId := int(claims["user_id"].(float64))
+	// userId := int(claims["user_id"].(float64))
 
 	var dto entity.ScoreSubmissionRequestDto
 	if err := c.BodyParser(&dto); err != nil {
@@ -95,7 +113,7 @@ func (h *TaskSubmissionHandler) ScoreSubmission(c *fiber.Ctx) error {
 		return response.SendError(c, fiber.StatusBadRequest, "Validation failed", validationErrors)
 	}
 
-	if err := h.svc.GiveScore(submissionId, int64(userId), dto); err != nil {
+	if err := h.svc.GiveScore(submissionId, dto); err != nil {
 		var appErr *app.AppError
 		if !errors.As(err, &appErr) {
 			appErr = app.ErrInternal

@@ -1,5 +1,7 @@
 package entity
 
+import "mime/multipart"
+
 type ListTaskRequestDto struct {
 	Search string
 	Page   int
@@ -20,8 +22,8 @@ type UpdateTaskRequestDto struct {
 }
 
 type SubmitTaskRequestDto struct {
-	Answer      string `form:"answer"`
-	AttachedURL string `form:"attached_url" validate:"omitempty,url"`
+	Answer      string                `form:"answer"`
+	AttachedURL *multipart.FileHeader `form:"attached_url" validate:"omitempty"`
 }
 
 type TaskResponseDto struct {
@@ -49,19 +51,28 @@ type TaskStatisticDto struct {
 }
 
 type TaskListSubmissionResponseDto struct {
-	ID          int64   `json:"id"`
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Content     string  `json:"content"`
-	Score       *int32  `json:"score"`
-	ScoredAt    *string `json:"scored_at"`
-	SubmittedAt string  `json:"submitted_at"`
-	Feedback    *string `json:"feedback"`
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Content     string `json:"content"`
+	Answer      string `json:"answer"`
+	AttachedURL string `json:"attached_url"`
+	Score       int32  `json:"score"`
+	ScoredAt    int64  `json:"scored_at"`
+	SubmittedAt string `json:"submitted_at"`
+	Feedback    string `json:"feedback"`
 }
 
 type TaskSubmissionDetailResponseDto struct {
-	TaskListSubmissionResponseDto
-	Answer              string  `json:"answer"`
-	TaskAttachmentUrl   *string `json:"task_attachment_url"`
-	AnswerAttachmentUrl *string `json:"answer_attachment_url"`
+	ID                  int64
+	Title               string
+	Description         string
+	Content             string
+	TaskAttachmentUrl   string
+	Answer              string
+	AnswerAttachmentUrl string
+	Score               int64
+	ScoredAt            int64
+	SubmittedAt         int64
+	Feedback            string
 }

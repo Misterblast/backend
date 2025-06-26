@@ -55,7 +55,14 @@ func (h *UserHandler) RegisterHandler(c *fiber.Ctx) error {
 
 	if form, err := c.MultipartForm(); err == nil {
 		if files := form.File["img"]; len(files) > 0 {
-			user.Img = files[0]
+			file := files[0]
+			const maxFileSize = 3 * 1024 * 1024
+
+			if file.Size > maxFileSize {
+				return response.SendError(c, fiber.StatusBadRequest, "File size exceeds 3MB limit", nil)
+			}
+
+			user.Img = file
 		}
 	}
 
@@ -187,7 +194,14 @@ func (h *UserHandler) EditUserHandler(c *fiber.Ctx) error {
 
 	if form, err := c.MultipartForm(); err == nil {
 		if files := form.File["img"]; len(files) > 0 {
-			user.Img = files[0]
+			file := files[0]
+			const maxFileSize = 3 * 1024 * 1024
+
+			if file.Size > maxFileSize {
+				return response.SendError(c, fiber.StatusBadRequest, "File size exceeds 3MB limit", nil)
+			}
+
+			user.Img = file
 		}
 	}
 

@@ -11,7 +11,10 @@ import (
 
 func Start() {
 
-	db, _ := pg.InitPostgres()
+	db, err := pg.InitPostgres()
+	if err != nil {
+		log.Warn("Database not avail : ", err.Error())
+	}
 	defer db.Close()
 
 	redis, err := cache.InitRedis()
