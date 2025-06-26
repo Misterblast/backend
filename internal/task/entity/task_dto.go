@@ -64,15 +64,15 @@ type TaskListSubmissionResponseDto struct {
 }
 
 type TaskSubmissionDetailResponseDto struct {
-	ID                  int64
-	Title               string
-	Description         string
-	Content             string
-	TaskAttachmentUrl   string
-	Answer              string
-	AnswerAttachmentUrl string
-	Score               int64
-	ScoredAt            int64
-	SubmittedAt         int64
-	Feedback            string
+	ID                  int64  `json:"id"`
+	Title               string `json:"title"`
+	Description         string `json:"description"`
+	Content             string `json:"content"`
+	TaskAttachmentUrl   string `json:"task_attachment_url"`
+	Answer              string `json:"answer"`
+	AnswerAttachmentUrl string `json:"answer_attachment_url"`
+	Score               int64  `json:"score"`
+	ScoredAt            int64  `json:"scored_at"`
+	SubmittedAt         int64  `json:"submitted_at"`
+	Feedback            string `json:"feedback"`
 }
