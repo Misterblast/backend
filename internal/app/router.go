@@ -57,21 +57,6 @@ func SetupRouter(db *sql.DB, redis *redis.Client) *fiber.App {
 		c.Set("Content-Type", "application/json")
 		return c.Send(jsonData)
 	})
-	app.Get("/update-password", func(c *fiber.Ctx) error {
-		return c.SendString(`
-		<!DOCTYPE html>
-		<html>
-			<head>
-				<title>Open in App</title>
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			</head>
-			<body>
-				<h3>Please open this link in the Go Assessment mobile app.</h3>
-				<p>If you haven't installed the app yet, <a href="https://play.google.com/store/apps/details?id=com.bluenv.goassessment">click here to download</a>.</p>
-			</body>
-		</html>
-	`)
-	})
 	app.Get("/routes", func(c *fiber.Ctx) error {
 		routes := app.Stack()
 		uniqueRoutes := make(map[string]bool)

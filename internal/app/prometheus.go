@@ -7,12 +7,13 @@ import (
 	"os"
 
 	log "github.com/ghulammuzz/misterblast/pkg/middleware"
+	metrics "github.com/ghulammuzz/misterblast/pkg/prom"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func StartPrometheusExporter() {
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", promhttp.HandlerFor(metrics.Registry, promhttp.HandlerOpts{}))
 
 	port := os.Getenv("PROMETHEUS_PORT")
 

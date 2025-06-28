@@ -2,11 +2,12 @@ package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
-	RequestCounter = promauto.NewCounterVec(
+	Registry = prometheus.NewRegistry()
+
+	RequestCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
 			Help: "Total HTTP requests received",
@@ -14,7 +15,7 @@ var (
 		[]string{"path", "method", "status"},
 	)
 
-	RequestDuration = promauto.NewHistogramVec(
+	RequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
 			Help:    "Histogram of response time for handler",
@@ -23,7 +24,7 @@ var (
 		[]string{"path", "method"},
 	)
 
-	ErrorCounter = promauto.NewCounterVec(
+	ErrorCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_errors_total",
 			Help: "Total HTTP errors",
@@ -32,8 +33,8 @@ var (
 	)
 )
 
-// func InitMetrics() {
-// 	prometheus.MustRegister(RequestCounter)
-// 	prometheus.MustRegister(RequestDuration)
-// 	prometheus.MustRegister(ErrorCounter)
-// }
+func Init() {
+	Registry.MustRegister(RequestCounter)
+	Registry.MustRegister(RequestDuration)
+	Registry.MustRegister(ErrorCounter)
+}
