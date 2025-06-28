@@ -269,11 +269,16 @@ func (h *QuestionHandler) ListQuestionAdminHandler(c *fiber.Ctx) error {
 	}
 	lang := c.Get("Lang")
 	if lang == "" {
-		lang = c.Query("lang") 
+		lang = c.Query("lang")
 	}
 	if lang == "" {
-		lang = "id" 
+		lang = "id"
 	}
+
+	if c.Query("set") == "Bahasa Indonesia" && lang == "en" {
+		lang = "id"
+	}
+
 	filter["lang"] = lang
 
 	page := c.QueryInt("page", 1)
