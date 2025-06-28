@@ -17,18 +17,20 @@ func Metrics() fiber.Handler {
 		duration := time.Since(start).Seconds()
 		route := c.Route()
 		path := "unknown"
+
 		if route != nil {
 			path = route.Path
 		}
 
 		method := c.Method()
-		status := fmt.Sprintf("%d", c.Response().StatusCode())
+		status := c.Response().StatusCode()
 
-		metrics.RequestCounter.WithLabelValues(path, method, status).Inc()
+		metrics.RequestCounter.WithLabelValues(path, method, fmt.Sprintf("%d", status)).Inc()
+
 		metrics.RequestDuration.WithLabelValues(path, method).Observe(duration)
 
-		if err != nil {
-			metrics.ErrorCounter.WithLabelValues(path, method, status).Inc()
+		if status >= 400 {
+			metrics.ErrorCounter.WithLabelValues(path, method, fmt.Sprintf("%d", status)).Inc()
 		}
 
 		return err
