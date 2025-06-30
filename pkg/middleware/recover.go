@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/ghulammuzz/misterblast/pkg/response"
 	"github.com/gofiber/fiber/v2"
@@ -10,9 +11,17 @@ import (
 func Recover() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		defer func() {
-			if err := recover(); err != nil {
-				Error("Recovered from panic: %v", err)
-				response.SendError(c, fiber.StatusInternalServerError, "[PANIC] Internal Server Error", fmt.Sprintf("%v", err))
+			if r := recover(); r != nil {
+				stackTrace := string(debug.Stack())
+
+				Error("[PANIC] Recovered: %v\nStack Trace:\n%s", r, stackTrace)
+
+				_ = response.SendError(
+					c,
+					fiber.StatusInternalServerError,
+					"[PANIC] Internal Server Error",
+					fmt.Sprintf("Recovered from panic: %v", r),
+				)
 			}
 		}()
 
