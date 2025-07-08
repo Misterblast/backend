@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
@@ -11,35 +12,38 @@ import (
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	log "github.com/ghulammuzz/misterblast/pkg/middleware"
 	"github.com/ghulammuzz/misterblast/pkg/response"
+	"github.com/redis/go-redis/v9"
 )
 
 func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]string, page, limit int) (*response.PaginateResponse, error) {
 	var questions []questionEntity.ListQuestionAdmin
 	var total int64
 
-	cacheKeyParts := []string{"question:list"}
-	for _, key := range []string{"is_quiz", "lesson", "class", "set", "lang", "search"} {
-		cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("%s:%s", key, filter[key]))
+	cacheKeyParts := []string{"cache:question:list"}
+	for _, key := range []string{"is_quiz", "lesson", "class", "set", "lang", "search", "code"} {
+		if val, ok := filter[key]; ok {
+			cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("%s:%s", key, val))
+		}
 	}
 	cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("page:%d", page), fmt.Sprintf("limit:%d", limit))
 	redisKey := strings.Join(cacheKeyParts, "|")
+
 	if r.redis != nil {
 		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[Repo][ListAdmin] Redis error:", err)
+		}
 		if err == nil && cached != "" {
 			var cachedResp response.PaginateResponse
 			if err := json.Unmarshal([]byte(cached), &cachedResp); err == nil {
 				return &cachedResp, nil
+			} else {
+				log.Warn("[Repo][ListAdmin] Failed to unmarshal cache:", err)
 			}
 		}
 	}
 
-	// cached, err := cache.Get(ctx, redisKey, r.redis)
-	// if err == nil && cached != "" {
-	// 	if err := json.Unmarshal([]byte(cached), &questions); err == nil {
-	// 		return questions, nil
-	// 	}
-	// }
-
+	// SQL query
 	baseQuery := `
 		FROM questions q
 		JOIN sets s ON q.set_id = s.id
@@ -53,30 +57,30 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 	argCounter := 1
 
 	if isQuiz, exists := filter["is_quiz"]; exists {
+		parsed, err := strconv.ParseBool(isQuiz)
+		if err != nil {
+			log.Warn("[Repo][ListAdmin] Invalid value for is_quiz:", isQuiz)
+			return nil, app.NewAppError(400, "invalid value for is_quiz")
+		}
 		whereClause += fmt.Sprintf(" AND q.is_quiz = $%d", argCounter)
-		args = append(args, isQuiz)
+		args = append(args, parsed)
 		argCounter++
 	}
-	if lesson, exists := filter["lesson"]; exists {
-		whereClause += fmt.Sprintf(" AND l.name = $%d", argCounter)
-		args = append(args, lesson)
-		argCounter++
+
+	for _, key := range []string{"lesson", "class", "set", "lang"} {
+		if val, exists := filter[key]; exists {
+			column := map[string]string{
+				"lesson": "l.name",
+				"class":  "c.name",
+				"set":    "s.name",
+				"lang":   "q.lang",
+			}[key]
+			whereClause += fmt.Sprintf(" AND %s = $%d", column, argCounter)
+			args = append(args, val)
+			argCounter++
+		}
 	}
-	if class, exists := filter["class"]; exists {
-		whereClause += fmt.Sprintf(" AND c.name = $%d", argCounter)
-		args = append(args, class)
-		argCounter++
-	}
-	if set, exists := filter["set"]; exists {
-		whereClause += fmt.Sprintf(" AND s.name = $%d", argCounter)
-		args = append(args, set)
-		argCounter++
-	}
-	if lang, exists := filter["lang"]; exists {
-		whereClause += fmt.Sprintf(" AND q.lang = $%d", argCounter)
-		args = append(args, lang)
-		argCounter++
-	}
+
 	if search, exists := filter["search"]; exists {
 		whereClause += fmt.Sprintf(" AND q.content ILIKE $%d", argCounter)
 		args = append(args, "%"+search+"%")
@@ -100,6 +104,7 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 		       s.name AS set_name, l.name AS lesson_name, c.name AS class_name
 	` + baseQuery + whereClause + " ORDER BY q.number"
 
+	// Pagination
 	if limit > 0 {
 		query += fmt.Sprintf(" LIMIT $%d", argCounter)
 		args = append(args, limit)
@@ -111,6 +116,7 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 		args = append(args, offset)
 	}
 
+	// Query
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		log.Error("[Repo][ListAdmin] Error Query:", err)
@@ -128,18 +134,22 @@ func (r *questionRepository) ListAdmin(ctx context.Context, filter map[string]st
 		questions = append(questions, q)
 	}
 
-	response := &response.PaginateResponse{
+	// Response
+	resp := &response.PaginateResponse{
 		Total: total,
 		Page:  page,
 		Limit: limit,
 		Data:  questions,
 	}
 
+	// Set to Redis
 	if r.redis != nil {
-		if dataJSON, err := json.Marshal(response); err == nil {
+		if dataJSON, err := json.Marshal(resp); err == nil {
 			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpSecond)
+		} else {
+			log.Warn("[Repo][ListAdmin] Failed to marshal cache:", err)
 		}
 	}
 
-	return response, nil
+	return resp, nil
 }

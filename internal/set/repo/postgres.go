@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	setEntity "github.com/ghulammuzz/misterblast/internal/set/entity"
@@ -61,23 +62,34 @@ func (c *setRepository) Delete(id int32) error {
 }
 
 func (r *setRepository) List(ctx context.Context, filter map[string]string) ([]setEntity.ListSet, error) {
-	redisKey := "set:list"
+	redisKey := "cache:set:list"
 	for k, v := range filter {
 		redisKey += fmt.Sprintf(":%s=%s", k, v)
 	}
+
 	if r.redis != nil {
 		cachedVal, err := cache.Get(ctx, redisKey, r.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[Repo][ListSets] Redis error: ", err)
+		}
 		if err == nil && cachedVal != "" {
 			var cachedSets []setEntity.ListSet
 			if err := json.Unmarshal([]byte(cachedVal), &cachedSets); err == nil {
 				return cachedSets, nil
+			} else {
+				log.Warn("[Repo][ListSets] Failed to unmarshal Redis cache: ", err)
 			}
 		}
 	}
 
-	query := `SELECT s.id, s.name, l.name AS lesson, c.name AS class, s.is_quiz FROM sets s
+	query := `
+		SELECT s.id, s.name, l.name AS lesson, c.name AS class, s.is_quiz
+		FROM sets s
 		JOIN lessons l ON s.lesson_id = l.id
-		JOIN classes c ON s.class_id = c.id WHERE 1=1`
+		JOIN classes c ON s.class_id = c.id
+		WHERE 1=1
+	`
+
 	args := []any{}
 	argCounter := 1
 
@@ -86,14 +98,21 @@ func (r *setRepository) List(ctx context.Context, filter map[string]string) ([]s
 		args = append(args, lesson)
 		argCounter++
 	}
+
 	if class, ok := filter["class"]; ok {
 		query += fmt.Sprintf(" AND c.name = $%d", argCounter)
 		args = append(args, class)
 		argCounter++
 	}
-	if isQuiz, ok := filter["is_quiz"]; ok {
+
+	if isQuizStr, ok := filter["is_quiz"]; ok {
+		isQuiz, err := strconv.ParseBool(isQuizStr)
+		if err != nil {
+			log.Warn("[Repo][ListSets] Invalid boolean for is_quiz: ", isQuizStr)
+			return nil, app.NewAppError(400, "invalid value for is_quiz")
+		}
 		query += fmt.Sprintf(" AND s.is_quiz = $%d", argCounter)
-		args = append(args, isQuiz == "true")
+		args = append(args, isQuiz)
 		argCounter++
 	}
 
@@ -101,7 +120,7 @@ func (r *setRepository) List(ctx context.Context, filter map[string]string) ([]s
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		log.Error("[Repo][ListSets] Error Query: ", err)
+		log.Error("[Repo][ListSets] Error executing query: ", err)
 		return nil, app.NewAppError(500, "failed to fetch sets")
 	}
 	defer rows.Close()
@@ -110,20 +129,22 @@ func (r *setRepository) List(ctx context.Context, filter map[string]string) ([]s
 	for rows.Next() {
 		var set setEntity.ListSet
 		if err := rows.Scan(&set.ID, &set.Name, &set.Lesson, &set.Class, &set.IsQuiz); err != nil {
-			log.Error("[Repo][ListSets] Error Scan: ", err)
+			log.Error("[Repo][ListSets] Error scanning row: ", err)
 			return nil, app.NewAppError(500, "failed to scan set")
 		}
 		sets = append(sets, set)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Error("[Repo][ListSets] Error Iterating Rows: ", err)
+		log.Error("[Repo][ListSets] Row iteration error: ", err)
 		return nil, app.NewAppError(500, "error iterating rows")
 	}
 
 	if r.redis != nil {
 		serialized, err := json.Marshal(sets)
-		if err == nil {
+		if err != nil {
+			log.Warn("[Repo][ListSets] Failed to marshal result for caching: ", err)
+		} else {
 			_ = cache.Set(ctx, redisKey, string(serialized), r.redis, cache.ExpBlazing)
 		}
 	}

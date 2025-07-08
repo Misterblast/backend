@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	classEntity "github.com/ghulammuzz/misterblast/internal/class/entity"
@@ -80,14 +79,18 @@ func (c *classRepository) Delete(id int32) error {
 
 func (c *classRepository) List(ctx context.Context) ([]classEntity.Class, error) {
 	var classes []classEntity.Class
-
-	redisKey := "classes"
+	redisKey := "cache:classes:list"
 
 	if c.redis != nil {
 		cached, err := cache.Get(ctx, redisKey, c.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[Repo][ListClass] Redis error: ", err)
+		}
 		if err == nil && cached != "" {
 			if err := json.Unmarshal([]byte(cached), &classes); err == nil {
 				return classes, nil
+			} else {
+				log.Warn("[Repo][ListClass] Failed to unmarshal Redis cache: ", err)
 			}
 		}
 	}
@@ -95,7 +98,7 @@ func (c *classRepository) List(ctx context.Context) ([]classEntity.Class, error)
 	query := `SELECT id, name FROM classes`
 	rows, err := c.db.Query(query)
 	if err != nil {
-		log.Error("[Repo][ListClass] Error Query: ", err)
+		log.Error("[Repo][ListClass] Error executing query: ", err)
 		return nil, app.NewAppError(500, "failed to fetch classes")
 	}
 	defer rows.Close()
@@ -103,20 +106,22 @@ func (c *classRepository) List(ctx context.Context) ([]classEntity.Class, error)
 	for rows.Next() {
 		var class classEntity.Class
 		if err := rows.Scan(&class.ID, &class.Name); err != nil {
-			log.Error("[Repo][ListClass] Error Scan: ", err)
+			log.Error("[Repo][ListClass] Error scanning row: ", err)
 			return nil, app.NewAppError(500, "failed to scan class")
 		}
 		classes = append(classes, class)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Error("[Repo][ListClass] Error Iterating Rows: ", err)
-		return nil, fmt.Errorf("error after iterating rows: %w", err)
+		log.Error("[Repo][ListClass] Error iterating rows: ", err)
+		return nil, app.NewAppError(500, "error iterating rows")
 	}
 
 	if c.redis != nil {
 		if dataJSON, err := json.Marshal(classes); err == nil {
 			_ = cache.Set(ctx, redisKey, string(dataJSON), c.redis, cache.ExpBlazing)
+		} else {
+			log.Warn("[Repo][ListClass] Failed to marshal data for Redis: ", err)
 		}
 	}
 

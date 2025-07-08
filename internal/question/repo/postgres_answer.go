@@ -35,7 +35,7 @@ func (r *questionRepository) UpsertAndSyncAnswers(questionID int32, answers []qu
 
 	for i, ans := range answers {
 		// Generate code: a, b, c, ...
-		generatedCode := string('a' + i)
+		generatedCode := string(rune('a' + i))
 
 		insertValues = append(insertValues, fmt.Sprintf(`($%d, $%d, $%d, $%d, $%d)`, insertIdx, insertIdx+1, insertIdx+2, insertIdx+3, insertIdx+4))
 		insertArgs = append(insertArgs, questionID, generatedCode, ans.Content, ans.ImgURL, ans.IsAnswer)

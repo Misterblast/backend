@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	log "github.com/ghulammuzz/misterblast/pkg/middleware"
+	"github.com/redis/go-redis/v9"
 )
 
 func (r *questionRepository) AddQuizAnswer(answer questionEntity.SetAnswer) error {
@@ -28,22 +30,33 @@ func (r *questionRepository) AddQuizAnswer(answer questionEntity.SetAnswer) erro
 }
 
 func (r *questionRepository) ListQuizQuestions(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionQuiz, error) {
-	redisKey := fmt.Sprintf("quiz:list:%s:%s:%s",
-		filter["set_id"], filter["type"], filter["number"],
-	)
+	redisKeyParts := []string{"cache:quiz:list"}
+	for _, key := range []string{"set_id", "type", "number"} {
+		if val, ok := filter[key]; ok {
+			redisKeyParts = append(redisKeyParts, fmt.Sprintf("%s=%s", key, val))
+		}
+	}
+	redisKey := strings.Join(redisKeyParts, "|")
+
 	if r.redis != nil {
 		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[Repo][ListQuizQuestions] Redis error:", err)
+		}
 		if err == nil && cached != "" {
 			var cachedData []questionEntity.ListQuestionQuiz
 			if err := json.Unmarshal([]byte(cached), &cachedData); err == nil {
 				return cachedData, nil
+			} else {
+				log.Warn("[Repo][ListQuizQuestions] Unmarshal cache error:", err)
 			}
 		}
 	}
+
 	query := `
 		SELECT q.id, q.number, q.type, q.format, q.content, q.set_id,
-			   COALESCE(a.id, 0) AS answer_id, COALESCE(a.code, '') AS code, 
-			   COALESCE(a.content, '') AS answer_content, COALESCE(a.img_url, '') AS img_url
+			   COALESCE(a.id, 0), COALESCE(a.code, ''), 
+			   COALESCE(a.content, ''), COALESCE(a.img_url, '')
 		FROM questions q
 		LEFT JOIN answers a ON q.id = a.question_id
 		WHERE q.is_quiz = true
@@ -85,11 +98,9 @@ func (r *questionRepository) ListQuizQuestions(ctx context.Context, filter map[s
 		var qType, qFormat, content string
 		var setID int32
 		var aID int32
-		var code, aContent string
-		var imgURL string
+		var code, aContent, imgURL string
 
-		err := rows.Scan(&qID, &number, &qType, &qFormat, &content, &setID,
-			&aID, &code, &aContent, &imgURL)
+		err := rows.Scan(&qID, &number, &qType, &qFormat, &content, &setID, &aID, &code, &aContent, &imgURL)
 		if err != nil {
 			log.Error("[Repo][ListQuizQuestions] Error Scan: ", err)
 			return nil, app.NewAppError(500, "failed to scan quiz questions")
@@ -129,6 +140,8 @@ func (r *questionRepository) ListQuizQuestions(ctx context.Context, filter map[s
 	if r.redis != nil {
 		if dataJSON, err := json.Marshal(finalQuestions); err == nil {
 			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
+		} else {
+			log.Warn("[Repo][ListQuizQuestions] Failed to marshal for cache:", err)
 		}
 	}
 

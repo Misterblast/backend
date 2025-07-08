@@ -40,27 +40,44 @@ func (c *contentRepository) Add(content contentEntity.Content, lang string) erro
 }
 
 func (c *contentRepository) List(filter map[string]string, ctx context.Context) (*response.PaginateResponse, error) {
-
 	var contents []contentEntity.Content
-	redisKey := "contents"
+
+	redisKey := "cache:contents:list"
+	if lang, ok := filter["lang"]; ok {
+		redisKey += fmt.Sprintf(":lang=%s", lang)
+	}
+	if p, ok := filter["page"]; ok {
+		redisKey += fmt.Sprintf(":page=%s", p)
+	}
+	if l, ok := filter["limit"]; ok {
+		redisKey += fmt.Sprintf(":limit=%s", l)
+	}
 
 	if c.redis != nil {
 		cached, err := cache.Get(ctx, redisKey, c.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[ContentRepository.List] Redis error: ", err)
+		}
 		if err == nil && cached != "" {
 			var cachedResp response.PaginateResponse
 			if err := json.Unmarshal([]byte(cached), &cachedResp); err == nil {
 				return &cachedResp, nil
+			} else {
+				log.Warn("[ContentRepository.List] Failed to unmarshal Redis cache: ", err)
 			}
 		}
 	}
+
 	query := `SELECT id, title, description, img_url, site_url, lang FROM content`
 	countQuery := `SELECT COUNT(*) FROM content`
 	var args []interface{}
 	var conditions []string
+	argCounter := 1
 
 	if l, ok := filter["lang"]; ok && (l == "id" || l == "en") {
-		conditions = append(conditions, "lang = $1")
+		conditions = append(conditions, fmt.Sprintf("lang = $%d", argCounter))
 		args = append(args, l)
+		argCounter++
 	}
 
 	if len(conditions) > 0 {
@@ -86,29 +103,25 @@ func (c *contentRepository) List(filter map[string]string, ctx context.Context) 
 
 	rows, err := c.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		log.Error("[ContentRepository.List]", "Error executing query", err)
+		log.Error("[ContentRepository.List] Error executing query: ", err)
 		return nil, app.NewAppError(500, "failed to execute content list query")
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var cont contentEntity.Content
-		err := rows.Scan(&cont.ID, &cont.Title, &cont.Desc, &cont.ImgURL, &cont.SiteURL, &cont.Lang)
-		if err != nil {
-			log.Error("[ContentRepository.List]", "Error scanning row", err)
+		if err := rows.Scan(&cont.ID, &cont.Title, &cont.Desc, &cont.ImgURL, &cont.SiteURL, &cont.Lang); err != nil {
+			log.Error("[ContentRepository.List] Error scanning row: ", err)
 			return nil, app.NewAppError(500, "failed to scan content row")
 		}
 		contents = append(contents, cont)
 	}
 
-	// Get total count
 	var total int64
-	err = c.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
-	if err != nil {
-		log.Error("[ContentRepository.List]", "Error counting total records", err)
+	if err := c.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		log.Error("[ContentRepository.List] Error counting total records: ", err)
 		return nil, app.NewAppError(500, "failed to count total records")
 	}
-
 	rs := &response.PaginateResponse{
 		Total: total,
 		Limit: limit,
@@ -119,6 +132,8 @@ func (c *contentRepository) List(filter map[string]string, ctx context.Context) 
 	if c.redis != nil {
 		if dataJSON, err := json.Marshal(rs); err == nil {
 			_ = cache.Set(ctx, redisKey, string(dataJSON), c.redis, cache.ExpSecond)
+		} else {
+			log.Warn("[ContentRepository.List] Failed to marshal data for Redis: ", err)
 		}
 	}
 

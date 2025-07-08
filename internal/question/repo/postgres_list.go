@@ -4,30 +4,40 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	questionEntity "github.com/ghulammuzz/misterblast/internal/question/entity"
 	"github.com/ghulammuzz/misterblast/pkg/app"
 	log "github.com/ghulammuzz/misterblast/pkg/middleware"
+	"github.com/redis/go-redis/v9"
 )
 
 func (r *questionRepository) List(ctx context.Context, filter map[string]string) ([]questionEntity.ListQuestionExample, error) {
 	var questions []questionEntity.ListQuestionExample
 
-	cacheKeyParts := []string{"question-user:list"}
-	for _, key := range []string{"is_quiz", "lesson", "class", "set", "lang", "search"} {
-		cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("%s:%s", key, filter[key]))
+	// Build Redis Key
+	cacheKeyParts := []string{"cache:question-user:list"}
+	for _, key := range []string{"is_quiz", "lesson_id", "class_id", "set_id", "lang", "search"} {
+		if val, ok := filter[key]; ok {
+			cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("%s=%s", key, val))
+		}
 	}
 	redisKey := strings.Join(cacheKeyParts, "|")
 
+	// Try Redis
 	if r.redis != nil {
 		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[Repo][List] Redis error:", err)
+		}
 		if err == nil && cached != "" {
 			var cachedQuestions []questionEntity.ListQuestionExample
 			if err := json.Unmarshal([]byte(cached), &cachedQuestions); err == nil {
 				return cachedQuestions, nil
 			}
+			log.Warn("[Repo][List] Failed to unmarshal cached questions:", err)
 		}
 	}
 
@@ -45,8 +55,13 @@ func (r *questionRepository) List(ctx context.Context, filter map[string]string)
 	argCounter := 1
 
 	if isQuiz, exists := filter["is_quiz"]; exists {
+		parsedBool, err := strconv.ParseBool(isQuiz)
+		if err != nil {
+			log.Warn("[Repo][List] Invalid is_quiz value:", isQuiz)
+			return nil, app.NewAppError(400, "invalid value for is_quiz")
+		}
 		whereClause += fmt.Sprintf(" AND q.is_quiz = $%d", argCounter)
-		args = append(args, isQuiz)
+		args = append(args, parsedBool)
 		argCounter++
 	}
 	if lesson, exists := filter["lesson_id"]; exists {
@@ -128,9 +143,12 @@ func (r *questionRepository) List(ctx context.Context, filter map[string]string)
 		questions = append(questions, q)
 	}
 
+	// Set Redis cache
 	if r.redis != nil {
 		if dataJSON, err := json.Marshal(questions); err == nil {
 			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpSecond)
+		} else {
+			log.Warn("[Repo][List] Failed to marshal questions for cache:", err)
 		}
 	}
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
 	"github.com/ghulammuzz/misterblast/internal/content/entity"
@@ -92,20 +91,25 @@ func (r *authorRepository) Get(ctx context.Context, id int32) (*entity.Author, e
 
 func (r *authorRepository) List(ctx context.Context) ([]entity.Author, error) {
 	var authors []entity.Author
-	redisKey := "authors"
+	redisKey := "cache:authors:list"
 
-	// try cache
 	if r.redis != nil {
-		if raw, _ := cache.Get(ctx, redisKey, r.redis); raw != "" {
+		raw, err := cache.Get(ctx, redisKey, r.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[Repo][ListAuthors] Redis error: ", err)
+		}
+		if err == nil && raw != "" {
 			if err := json.Unmarshal([]byte(raw), &authors); err == nil {
 				return authors, nil
+			} else {
+				log.Warn("[Repo][ListAuthors] Failed to unmarshal Redis cache: ", err)
 			}
 		}
 	}
 
 	rows, err := r.db.QueryContext(ctx, `SELECT id, name, img_url, description FROM authors ORDER BY id`)
 	if err != nil {
-		log.Error("[Repo][ListAuthors] ", err.Error())
+		log.Error("[Repo][ListAuthors] Query error: ", err)
 		return nil, app.NewAppError(500, "failed to list authors")
 	}
 	defer rows.Close()
@@ -113,20 +117,25 @@ func (r *authorRepository) List(ctx context.Context) ([]entity.Author, error) {
 	for rows.Next() {
 		var a entity.Author
 		if err := rows.Scan(&a.ID, &a.Name, &a.ImgURL, &a.Description); err != nil {
+			log.Error("[Repo][ListAuthors] Scan error: ", err)
 			return nil, app.NewAppError(500, "failed to scan author")
 		}
 		authors = append(authors, a)
 	}
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("rows error: %w", rows.Err())
+
+	if err := rows.Err(); err != nil {
+		log.Error("[Repo][ListAuthors] Row iteration error: ", err)
+		return nil, app.NewAppError(500, "error iterating rows")
 	}
 
-	// cache
 	if r.redis != nil {
 		if b, err := json.Marshal(authors); err == nil {
 			_ = cache.Set(ctx, redisKey, string(b), r.redis, cache.ExpInstant)
+		} else {
+			log.Warn("[Repo][ListAuthors] Failed to marshal data for cache: ", err)
 		}
 	}
+
 	return authors, nil
 }
 

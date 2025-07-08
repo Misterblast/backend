@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	cache "github.com/ghulammuzz/misterblast/config/redis"
@@ -72,35 +73,40 @@ func (r *questionRepository) Add(question questionEntity.SetQuestion, lang strin
 
 func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEntity.DetailQuestionExample, error) {
 	var question questionEntity.DetailQuestionExample
-	redisKey := fmt.Sprintf("question:detail:%d", id)
+	redisKey := fmt.Sprintf("cache:question:detail:%d", id)
 
 	if r.redis != nil {
 		cached, err := cache.Get(ctx, redisKey, r.redis)
+		if err != nil && err != redis.Nil {
+			log.Warn("[Repo][DetailQuestion] Redis error:", err)
+		}
 		if err == nil && cached != "" {
 			if err := json.Unmarshal([]byte(cached), &question); err == nil {
 				return question, nil
+			} else {
+				log.Warn("[Repo][DetailQuestion] Failed to unmarshal from Redis:", err)
 			}
 		}
 	}
 
 	var answersJSON []byte
 	query := `
-	SELECT 
-		q.id, q.number, q.type, q.format, q.content, q.explanation, q.reasoning, q.set_id,
-		COALESCE(json_agg(json_build_object(
-			'id', a.id,
-			'code', a.code,
-			'content', a.content,
-			'img_url', a.img_url,
-			'is_answer', a.is_answer
-		)) FILTER (WHERE a.id IS NOT NULL), '[]') AS answers
-	FROM questions q
-	LEFT JOIN answers a ON q.id = a.question_id
-	WHERE q.id = $1
-	GROUP BY q.id
+		SELECT 
+			q.id, q.number, q.type, q.format, q.content, q.explanation, q.reasoning, q.set_id,
+			COALESCE(json_agg(json_build_object(
+				'id', a.id,
+				'code', a.code,
+				'content', a.content,
+				'img_url', a.img_url,
+				'is_answer', a.is_answer
+			)) FILTER (WHERE a.id IS NOT NULL), '[]') AS answers
+		FROM questions q
+		LEFT JOIN answers a ON q.id = a.question_id
+		WHERE q.id = $1
+		GROUP BY q.id
 	`
 
-	err := r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&question.ID,
 		&question.Number,
 		&question.Type,
@@ -112,21 +118,23 @@ func (r *questionRepository) Detail(ctx context.Context, id int32) (questionEnti
 		&answersJSON,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return question, app.NewAppError(404, "question not found")
 		}
-		log.Error("[Repo][DetailQuestion] Error scanning:", err)
+		log.Error("[Repo][DetailQuestion] DB Scan Error:", err)
 		return question, app.NewAppError(500, "failed to fetch question detail")
 	}
 
 	if err := json.Unmarshal(answersJSON, &question.Answers); err != nil {
-		log.Error("[Repo][DetailQuestion] Error unmarshalling answers:", err)
+		log.Error("[Repo][DetailQuestion] Failed to unmarshal answers:", err)
 		return question, app.NewAppError(500, "failed to parse answers")
 	}
-	// log.Debug("Reason : ", question.Reason)
+
 	if r.redis != nil {
 		if dataJSON, err := json.Marshal(question); err == nil {
 			_ = cache.Set(ctx, redisKey, string(dataJSON), r.redis, cache.ExpBlazing)
+		} else {
+			log.Warn("[Repo][DetailQuestion] Failed to marshal question for Redis:", err)
 		}
 	}
 
